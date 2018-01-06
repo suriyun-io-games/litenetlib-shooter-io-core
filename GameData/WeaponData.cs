@@ -45,15 +45,17 @@ public class WeaponData : ItemData
         {
             var damageLaunchTransform = attacker.damageLaunchTransform;
             var damageEntity = Instantiate(damagePrefab,
-                damageLaunchTransform.position,
-                Quaternion.Euler(damageLaunchTransform.rotation.eulerAngles + new Vector3(Random.Range(-staggerX, staggerX), Random.Range(-staggerY, staggerY))));
-            damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
+                    damageLaunchTransform.position,
+                    damageLaunchTransform.rotation);
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
-            damageEntity.Attacker = attacker;
+            damageEntity.InitAttacker(attacker, Random.Range(-staggerX, staggerX), Random.Range(-staggerY, staggerY));
+            damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
             NetworkServer.Spawn(damageEntity.gameObject);
         }
+
+        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);
     }
 
     public void SetupAnimations()
