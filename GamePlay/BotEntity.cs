@@ -17,6 +17,10 @@ public class BotEntity : CharacterEntity
     public float turnSpeed = 5f;
     public bool useCustomMoveSpeed;
     public float customMoveSpeed;
+    public CharacterModel fixCharacterModel;
+    public CharacterData fixCharacterData;
+    public HeadData fixHeadData;
+    public WeaponData fixWeaponData;
     public Characteristic characteristic;
     public CharacterStats startAddStats;
     private Vector3 targetPosition;
@@ -26,9 +30,52 @@ public class BotEntity : CharacterEntity
     public override void OnStartServer()
     {
         base.OnStartServer();
+
         ServerSpawn(false);
         lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
         lastAttackTime = Time.unscaledTime - attackDuration;
+    }
+
+    protected override void OnCharacterChanged(string value)
+    {
+        if (fixCharacterModel != null && fixCharacterData != null)
+        {
+            selectCharacter = fixCharacterData.GetId();
+            characterData = fixCharacterData;
+            characterModel = fixCharacterModel;
+            if (headData != null)
+                characterModel.SetHeadModel(headData.modelObject);
+            if (WeaponData != null)
+                characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
+        }
+        else if (fixCharacterData != null)
+        {
+            selectCharacter = fixCharacterData.GetId();
+            base.OnCharacterChanged(selectCharacter);
+        }
+        else if (fixCharacterModel != null)
+        {
+            selectCharacter = value;
+            characterData = GameInstance.GetCharacter(value);
+            characterModel = fixCharacterModel;
+            if (headData != null)
+                characterModel.SetHeadModel(headData.modelObject);
+            if (WeaponData != null)
+                characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
+        }
+        else
+            base.OnCharacterChanged(value);
+    }
+
+    protected override void OnHeadChanged(string value)
+    {
+        if (fixHeadData != null)
+        {
+            selectHead = fixHeadData.GetId();
+            base.OnHeadChanged(selectHead);
+        }
+        else
+            base.OnHeadChanged(value);
     }
 
     public override void OnStartLocalPlayer()
@@ -43,14 +90,15 @@ public class BotEntity : CharacterEntity
 
         if (GameNetworkManager.Singleton.numPlayers <= 0)
         {
-            TempRigidbody.velocity = Vector3.zero;
+            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+            attackingActionId = -1;
             return;
         }
 
         if (Hp <= 0)
         {
             ServerRespawn(false);
-            TempRigidbody.velocity = Vector3.zero;
+            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
             return;
         }
         // Bots will update target movement when reached move target / hitting the walls / it's time
@@ -67,7 +115,7 @@ public class BotEntity : CharacterEntity
 
         var rotatePosition = targetPosition;
         CharacterEntity enemy;
-        if (FindEnemy(out enemy) && !isReloading && characteristic == Characteristic.Normal && Time.unscaledTime - lastAttackTime >= attackDuration)
+        if (FindEnemy(out enemy) && characteristic == Characteristic.Normal && Time.unscaledTime - lastAttackTime >= attackDuration)
         {
             lastAttackTime = Time.unscaledTime;
             if (CurrentEquippedWeapon.currentReserveAmmo > 0)
@@ -94,10 +142,10 @@ public class BotEntity : CharacterEntity
         var direction = heading / distance; // This is now the normalized direction.
         var moveSpeed = useCustomMoveSpeed ? customMoveSpeed : TotalMoveSpeed;
         Vector3 movementDir = direction * moveSpeed * GameplayManager.REAL_MOVE_SPEED_RATE;
-        TempRigidbody.velocity = movementDir;
+        TempRigidbody.velocity = new Vector3(movementDir.x, TempRigidbody.velocity.y, movementDir.z);
         var rotateHeading = rotatePosition - TempTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
-        TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, targetRotation, Time.deltaTime * turnSpeed);
+        TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
     }
 
     private bool IsReachedTargetPosition()
@@ -123,10 +171,7 @@ public class BotEntity : CharacterEntity
 
     private void OnCollisionStay(Collision collision)
     {
-        var character = collision.gameObject.GetComponent<CharacterEntity>();
-        var damage = collision.gameObject.GetComponent<DamageEntity>();
-
-        if (character == null && damage == null)
+        if (collision.collider.tag == "Wall")
             isWallHit = true;
     }
 

@@ -562,36 +562,39 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
         if (!isPlayingAttackAnim && !isReloading && CurrentEquippedWeapon.CanShoot() && Hp > 0)
         {
             isPlayingAttackAnim = true;
-            if (WeaponData != null && characterModel != null)
+            if (WeaponData != null &&
+                WeaponData.AttackAnimations.ContainsKey(actionId) &&
+                characterModel != null &&
+                characterModel.TempAnimator != null)
             {
                 var animator = characterModel.TempAnimator;
-                if (animator != null)
+                // Play attack animation
+                var attackAnimation = WeaponData.AttackAnimations[actionId];
+                animator.SetBool("DoAction", true);
+                animator.SetInteger("ActionID", attackAnimation.actionId);
+                var animationDuration = attackAnimation.animationDuration;
+                var launchDuration = attackAnimation.launchDuration;
+                if (launchDuration > animationDuration)
+                    launchDuration = animationDuration;
+                yield return new WaitForSeconds(launchDuration);
+                // Launch damage entity on server only
+                if (isServer)
                 {
-                    // Play attack animation
-                    var attackAnimation = WeaponData.AttackAnimations[actionId];
-                    animator.SetBool("DoAction", true);
-                    animator.SetInteger("ActionID", attackAnimation.actionId);
-                    var animationDuration = attackAnimation.animationDuration;
-                    var launchDuration = attackAnimation.launchDuration;
-                    if (launchDuration > animationDuration)
-                        launchDuration = animationDuration;
-                    yield return new WaitForSeconds(launchDuration);
-                    // Launch damage entity on server only
-                    if (isServer)
-                    {
-                        WeaponData.Launch(this);
-                        var equippedWeapon = CurrentEquippedWeapon;
-                        equippedWeapon.DecreaseAmmo();
-                        equippedWeapons[selectWeaponIndex] = equippedWeapon;
-                        equippedWeapons.Dirty(selectWeaponIndex);
-                    }
-                    if (WeaponData.attackFx != null && WeaponData.attackFx.Length > 0 && AudioManager.Singleton != null)
-                        AudioSource.PlayClipAtPoint(WeaponData.attackFx[Random.Range(0, WeaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
-                    yield return new WaitForSeconds(animationDuration - launchDuration);
-                    // Attack animation ended
-                    animator.SetBool("DoAction", false);
+                    WeaponData.Launch(this);
+                    var equippedWeapon = CurrentEquippedWeapon;
+                    equippedWeapon.DecreaseAmmo();
+                    equippedWeapons[selectWeaponIndex] = equippedWeapon;
+                    equippedWeapons.Dirty(selectWeaponIndex);
                 }
+                if (WeaponData.attackFx != null && WeaponData.attackFx.Length > 0 && AudioManager.Singleton != null)
+                    AudioSource.PlayClipAtPoint(WeaponData.attackFx[Random.Range(0, WeaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+                yield return new WaitForSeconds(animationDuration - launchDuration);
+                // Attack animation ended
+                animator.SetBool("DoAction", false);
             }
+            // If player still attacking, random new attacking action id
+            if (isServer && attackingActionId >= 0 && WeaponData != null)
+                attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
             yield return new WaitForEndOfFrame();
             isPlayingAttackAnim = false;
         }
@@ -712,7 +715,7 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
         return WeaponData.damagePrefab.GetAttackRange();
     }
 
-    private void OnCharacterChanged(string value)
+    protected virtual void OnCharacterChanged(string value)
     {
         selectCharacter = value;
         if (characterModel != null)
@@ -731,7 +734,7 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
         characterModel.gameObject.SetActive(true);
     }
 
-    private void OnHeadChanged(string value)
+    protected virtual void OnHeadChanged(string value)
     {
         selectHead = value;
         headData = GameInstance.GetHead(value);
@@ -739,7 +742,7 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
             characterModel.SetHeadModel(headData.modelObject);
     }
 
-    private void OnWeaponChanged(int value)
+    protected virtual void OnWeaponChanged(int value)
     {
         selectWeaponIndex = value;
         if (selectWeaponIndex < 0 || selectWeaponIndex >= equippedWeapons.Count)
@@ -748,7 +751,7 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
             characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
     }
 
-    private void OnWeaponsChanged(string value)
+    protected virtual void OnWeaponsChanged(string value)
     {
         selectWeapons = value;
         // Changes weapon list, equip first weapon equipped position
