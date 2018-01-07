@@ -477,27 +477,38 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
             StartCoroutine(AttackRoutine(attackingActionId));
     }
 
-    protected virtual void UpdateMovements()
+    protected virtual float GetMoveSpeed()
     {
-        if (!isLocalPlayer)
-            return;
+        return TotalMoveSpeed * GameplayManager.REAL_MOVE_SPEED_RATE;
+    }
 
-        if (Hp <= 0)
-        {
-            TempRigidbody.velocity = Vector3.zero;
-            return;
-        }
-
-        var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
+    protected virtual void Move(Vector3 direction)
+    {
         if (direction.magnitude != 0)
         {
             if (direction.magnitude > 1)
                 direction = direction.normalized;
-            Vector3 movementDir = direction * TotalMoveSpeed * GameplayManager.REAL_MOVE_SPEED_RATE;
-            TempRigidbody.velocity = movementDir;
+
+            var targetSpeed = GetMoveSpeed();
+            var targetVelocity = direction * targetSpeed;
+
+            // Apply a force that attempts to reach our target velocity
+            Vector3 velocity = TempRigidbody.velocity;
+            Vector3 velocityChange = (targetVelocity - velocity);
+            velocityChange.x = Mathf.Clamp(velocityChange.x, -targetSpeed, targetSpeed);
+            velocityChange.y = 0;
+            velocityChange.z = Mathf.Clamp(velocityChange.z, -targetSpeed, targetSpeed);
+            TempRigidbody.AddForce(velocityChange, ForceMode.VelocityChange);
         }
-        else
-            TempRigidbody.velocity = Vector3.zero;
+    }
+
+    protected virtual void UpdateMovements()
+    {
+        if (!isLocalPlayer || Hp <= 0)
+            return;
+
+        var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
+        Move(direction);
 
         if (Application.isMobilePlatform)
         {

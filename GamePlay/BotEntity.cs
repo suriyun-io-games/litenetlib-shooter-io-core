@@ -140,12 +140,16 @@ public class BotEntity : CharacterEntity
         var heading = targetPosition - TempTransform.position;
         var distance = heading.magnitude;
         var direction = heading / distance; // This is now the normalized direction.
-        var moveSpeed = useCustomMoveSpeed ? customMoveSpeed : TotalMoveSpeed;
-        Vector3 movementDir = direction * moveSpeed * GameplayManager.REAL_MOVE_SPEED_RATE;
-        TempRigidbody.velocity = new Vector3(movementDir.x, TempRigidbody.velocity.y, movementDir.z);
+        Move(direction);
+        // Rotate to target
         var rotateHeading = rotatePosition - TempTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
+    }
+
+    protected override float GetMoveSpeed()
+    {
+        return (useCustomMoveSpeed ? customMoveSpeed : TotalMoveSpeed) * GameplayManager.REAL_MOVE_SPEED_RATE;
     }
 
     private bool IsReachedTargetPosition()
