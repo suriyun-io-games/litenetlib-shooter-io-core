@@ -3,10 +3,6 @@ using UnityEngine.Networking;
 
 public class IONetworkGameRule : BaseNetworkGameRule
 {
-    public IONetworkGameRule(SimpleLanNetworkManager manager) : base(manager)
-    {
-    }
-
     protected override void AddBot()
     {
         var gameInstance = GameInstance.Singleton;
