@@ -26,7 +26,6 @@ public class GameplayManager : NetworkBehaviour
     [Header("UI")]
     public UIGameplay uiGameplay;
     [Header("Game rules")]
-    public int botCount = 10;
     public int watchAdsRespawnAvailable = 2;
     public float updateScoreDuration = 1f;
     public float respawnDuration = 5f;
@@ -95,21 +94,6 @@ public class GameplayManager : NetworkBehaviour
                 continue;
             for (var i = 0; i < pickup.amount; ++i)
                 SpawnPickup(pickup.pickupPrefab.name);
-        }
-        var gameInstance = GameInstance.Singleton;
-        var botList = gameInstance.bots;
-        var characterKeys = GameInstance.Characters.Keys;
-        var weaponKeys = GameInstance.Weapons.Keys;
-        for (var i = 0; i < botCount; ++i)
-        {
-            var bot = botList[Random.Range(0, botList.Length)];
-            var botEntity = Instantiate(gameInstance.botPrefab);
-            botEntity.playerName = bot.name;
-            botEntity.selectHead = bot.GetSelectHead();
-            botEntity.selectCharacter = bot.GetSelectCharacter();
-            botEntity.selectWeapons = bot.GetSelectWeapons();
-            NetworkServer.Spawn(botEntity.gameObject);
-            characters.Add(botEntity);
         }
     }
 
