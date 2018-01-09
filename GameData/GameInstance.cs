@@ -64,21 +64,7 @@ public class GameInstance : MonoBehaviour
         }
 
         UpdateAvailableItems();
-
-        // Initial first player save
-        var savedWeapons = PlayerSave.GetWeapons();
-        if (savedWeapons.Count == 0)
-        {
-            var savingWeapons = new Dictionary<int, int>();
-            for (var i = 0; i < AvailableWeapons.Count; ++i)
-            {
-                var savingWeapon = AvailableWeapons[i];
-                var equipPosition = savingWeapon.equipPosition;
-                if (!savingWeapons.ContainsKey(equipPosition))
-                    savingWeapons[equipPosition] = i;
-            }
-            PlayerSave.SetWeapons(savingWeapons);
-        }
+        ValidatePlayerSave();
     }
 
     private void Start()
@@ -113,6 +99,50 @@ public class GameInstance : MonoBehaviour
         {
             if (weapon != null && weapon.IsUnlock())
                 AvailableWeapons.Add(weapon);
+        }
+    }
+
+    public void ValidatePlayerSave()
+    {
+        var head = PlayerSave.GetHead();
+        if (head < 0 || head >= AvailableHeads.Count)
+            PlayerSave.SetHead(0);
+
+        var character = PlayerSave.GetCharacter();
+        if (character < 0 || character >= AvailableCharacters.Count)
+            PlayerSave.SetCharacter(0);
+
+
+        // Initial first player save
+        var savedWeapons = PlayerSave.GetWeapons();
+        if (savedWeapons.Count == 0)
+        {
+            var savingWeapons = new Dictionary<int, int>();
+            for (var i = 0; i < AvailableWeapons.Count; ++i)
+            {
+                var savingWeapon = AvailableWeapons[i];
+                var equipPosition = savingWeapon.equipPosition;
+                if (!savingWeapons.ContainsKey(equipPosition))
+                    savingWeapons[equipPosition] = i;
+            }
+            PlayerSave.SetWeapons(savingWeapons);
+        }
+        else
+        {
+            var savingWeapons = new Dictionary<int, int>();
+            foreach (var savedWeapon in savedWeapons)
+            {
+                var equippedPosition = savedWeapon.Key;
+                var availableWeaponIndex = savedWeapon.Value;
+                if (availableWeaponIndex >= 0 && availableWeaponIndex < AvailableWeapons.Count)
+                {
+                    var savingWeapon = AvailableWeapons[availableWeaponIndex];
+                    var equipPosition = savingWeapon.equipPosition;
+                    if (!savingWeapons.ContainsKey(equipPosition))
+                        savingWeapons[equipPosition] = availableWeaponIndex;
+                }
+            }
+            PlayerSave.SetWeapons(savingWeapons);
         }
     }
 
