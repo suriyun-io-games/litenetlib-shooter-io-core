@@ -40,7 +40,7 @@ public class UIEquippedWeapon : UIWeaponSelectEntry
 
     public override void OnClickSelectWeapon()
     {
-        var localCharacter = CharacterEntity.Local;
+        var localCharacter = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (localCharacter == null)
             return;
         localCharacter.CmdChangeWeapon(indexInAvailableList);

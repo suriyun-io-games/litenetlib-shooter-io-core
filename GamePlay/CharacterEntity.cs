@@ -5,13 +5,12 @@ using UnityEngine.Networking;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody))]
-public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEntity>
+public class CharacterEntity : BaseNetworkGameCharacter
 {
     public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
     public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public const byte RPC_EFFECT_TRAP_HIT = 2;
     public const int MAX_EQUIPPABLE_WEAPON_AMOUNT = 10;
-    public static CharacterEntity Local { get; private set; }
     public Transform damageLaunchTransform;
     public Transform effectTransform;
     public Transform characterModelTransform;
@@ -25,23 +24,6 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
     [Header("Effect")]
     public GameObject invincibleEffect;
     [Header("Online data")]
-    [SyncVar]
-    public string playerName;
-
-    [SyncVar]
-    public int score;
-    public int Score
-    {
-        get { return score; }
-        set
-        {
-            if (!isServer)
-                return;
-
-            score = value;
-            GameplayManager.Singleton.UpdateRank(netId);
-        }
-    }
 
     [SyncVar]
     public int hp;
@@ -122,9 +104,6 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
 
     [SyncVar]
     public int statPoint;
-
-    [SyncVar]
-    public int killCount;
 
     [SyncVar]
     public int watchAdsCount;
@@ -403,10 +382,8 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
 
     public override void OnStartLocalPlayer()
     {
-        if (Local != null)
-            return;
+        base.OnStartLocalPlayer();
 
-        Local = this;
         var followCam = FindObjectOfType<FollowCamera>();
         followCam.target = TempTransform;
         targetCamera = followCam.GetComponent<Camera>();
@@ -706,7 +683,7 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
         var gameplayManager = GameplayManager.Singleton;
         var targetLevel = target.level;
         Exp += Mathf.CeilToInt(gameplayManager.GetRewardExp(targetLevel) * TotalExpRate);
-        Score += Mathf.CeilToInt(gameplayManager.GetKillScore(targetLevel) * TotalScoreRate);
+        score += Mathf.CeilToInt(gameplayManager.GetKillScore(targetLevel) * TotalScoreRate);
         ++killCount;
     }
 
@@ -826,33 +803,17 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
     [Server]
     public void ServerSpawn(bool isWatchedAds)
     {
-        var gameplayManager = GameplayManager.Singleton;
-        if (!isWatchedAds || watchAdsCount >= gameplayManager.watchAdsRespawnAvailable)
-            Reset();
-        else
+        if (Respawn(isWatchedAds))
         {
-            ++watchAdsCount;
-            isPlayingAttackAnim = false;
-            isReloading = false;
-            isDead = false;
-            Hp = TotalHp;
-            for (var i = 0; i < equippedWeapons.Count; ++i)
-            {
-                var equippedWeapon = equippedWeapons[i];
-                equippedWeapon.SetMaxAmmo();
-                equippedWeapons[i] = equippedWeapon;
-                equippedWeapons.Dirty(i);
-            }
-            selectWeaponIndex = defaultWeaponIndex;
-            OnWeaponChanged(selectWeaponIndex);
-            RpcWeaponChanged(selectWeaponIndex);
+            var gameplayManager = GameplayManager.Singleton;
+            ServerInvincible();
+            OnSpawn();
+            var position = gameplayManager.GetCharacterSpawnPosition();
+            TempTransform.position = position;
+            if (connectionToClient != null)
+                TargetSpawn(connectionToClient, position);
+            ServerRevive();
         }
-        ServerInvincible();
-        OnSpawn();
-        var position = gameplayManager.GetCharacterSpawnPosition();
-        TempTransform.position = position;
-        if (connectionToClient != null)
-            TargetSpawn(connectionToClient, position);
     }
 
     [Server]
@@ -864,21 +825,8 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
     }
 
     [Server]
-    public void Reset()
+    public void ServerRevive()
     {
-        Score = 0;
-        Exp = 0;
-        level = 1;
-        statPoint = 0;
-        killCount = 0;
-        watchAdsCount = 0;
-        addStats = new CharacterStats();
-        isPlayingAttackAnim = false;
-        isReloading = false;
-        isDead = false;
-        Hp = TotalHp;
-        Armor = 0;
-
         for (var i = 0; i < equippedWeapons.Count; ++i)
         {
             var equippedWeapon = equippedWeapons[i];
@@ -890,6 +838,11 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
         selectWeaponIndex = defaultWeaponIndex;
         OnWeaponChanged(selectWeaponIndex);
         RpcWeaponChanged(selectWeaponIndex);
+
+        isPlayingAttackAnim = false;
+        isReloading = false;
+        isDead = false;
+        Hp = TotalHp;
     }
 
     [Server]
@@ -970,7 +923,6 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
         if (!isReady)
         {
             ServerSpawn(false);
-            GameplayManager.Singleton.UpdateRank(netId);
             isReady = true;
         }
     }
@@ -1100,10 +1052,5 @@ public class CharacterEntity : NetworkBehaviour, System.IComparable<CharacterEnt
     private void TargetSpawn(NetworkConnection conn, Vector3 position)
     {
         transform.position = position;
-    }
-
-    public int CompareTo(CharacterEntity other)
-    {
-        return ((-1 * Score.CompareTo(other.Score)) * 10) + netId.Value.CompareTo(other.netId.Value);
     }
 }

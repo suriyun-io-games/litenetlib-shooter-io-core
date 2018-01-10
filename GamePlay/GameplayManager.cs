@@ -7,7 +7,6 @@ using UnityEngine.Networking;
 public class GameplayManager : NetworkBehaviour
 {
     public const float REAL_MOVE_SPEED_RATE = 0.1f;
-    public const int RANKING_AMOUNT = 5;
     public static GameplayManager Singleton { get; private set; }
     [Header("Character stats")]
     public int maxLevel = 1000;
@@ -36,13 +35,9 @@ public class GameplayManager : NetworkBehaviour
     public SpawnArea[] pickupSpawnAreas;
     public PowerUpSpawnData[] powerUps;
     public PickupSpawnData[] pickups;
-    public readonly List<CharacterEntity> characters = new List<CharacterEntity>();
     public readonly Dictionary<string, PowerUpEntity> powerUpEntities = new Dictionary<string, PowerUpEntity>();
     public readonly Dictionary<string, PickupEntity> pickupEntities = new Dictionary<string, PickupEntity>();
     public readonly Dictionary<string, CharacterAttributes> attributes = new Dictionary<string, CharacterAttributes>();
-    private UserRanking[] userRankings = new UserRanking[RANKING_AMOUNT];
-    // Private
-    private float lastUpdateScoreTime;
 
     private void Awake()
     {
@@ -52,7 +47,6 @@ public class GameplayManager : NetworkBehaviour
             return;
         }
         Singleton = this;
-        lastUpdateScoreTime = Time.unscaledTime;
 
         powerUpEntities.Clear();
         foreach (var powerUp in powerUps)
@@ -121,36 +115,7 @@ public class GameplayManager : NetworkBehaviour
             NetworkServer.Spawn(pickupEntity.gameObject);
         }
     }
-
-    private void Update()
-    {
-        if (Time.unscaledTime - lastUpdateScoreTime >= updateScoreDuration)
-        {
-            if (isServer)
-                UpdateScores();
-            lastUpdateScoreTime = Time.unscaledTime;
-        }
-    }
-
-    private void UpdateScores()
-    {
-        characters.Sort();
-        userRankings = new UserRanking[RANKING_AMOUNT];
-        for (var i = 0; i < RANKING_AMOUNT; ++i)
-        {
-            if (i >= characters.Count)
-                break;
-            var character = characters[i];
-            var ranking = new UserRanking();
-            ranking.netId = character.netId;
-            ranking.playerName = character.playerName;
-            ranking.score = character.Score;
-            ranking.killCount = character.killCount;
-            userRankings[i] = ranking;
-        }
-        RpcUpdateRankings(userRankings);
-    }
-
+    
     public Vector3 GetCharacterSpawnPosition()
     {
         if (characterSpawnAreas == null || characterSpawnAreas.Length == 0)
@@ -185,36 +150,5 @@ public class GameplayManager : NetworkBehaviour
     public int GetKillScore(int currentLevel)
     {
         return killScore.Calculate(currentLevel, maxLevel);
-    }
-    
-    public void UpdateRank(NetworkInstanceId netId)
-    {
-        var target = NetworkServer.FindLocalObject(netId);
-        if (target == null)
-            return;
-        var character = target.GetComponent<CharacterEntity>();
-        if (character == null)
-            return;
-        var ranking = new UserRanking();
-        ranking.netId = character.netId;
-        ranking.playerName = character.playerName;
-        ranking.score = character.Score;
-        ranking.killCount = character.killCount;
-        if (character.connectionToClient != null)
-            TargetUpdateLocalRank(character.connectionToClient, characters.IndexOf(character) + 1, ranking);
-    }
-
-    [ClientRpc]
-    private void RpcUpdateRankings(UserRanking[] userRankings)
-    {
-        if (uiGameplay != null)
-            uiGameplay.UpdateRankings(userRankings);
-    }
-
-    [TargetRpc]
-    private void TargetUpdateLocalRank(NetworkConnection conn, int rank, UserRanking ranking)
-    {
-        if (uiGameplay != null)
-            uiGameplay.UpdateLocalRank(rank, ranking);
     }
 }

@@ -22,8 +22,8 @@ public class UIGameplay : MonoBehaviour
     public Text textReloadTimePercent;
     public UIRandomAttributes randomAttributes;
     public UIEquippedWeapon[] equippedWeapons;
-    public UIUserRanking[] userRankings;
-    public UIUserRanking localRanking;
+    public UINetworkGameScoreEntry[] userRankings;
+    public UINetworkGameScoreEntry localRanking;
     public GameObject[] mobileOnlyUis;
     public GameObject[] hidingIfDedicateServerUis;
     private bool isRespawnShown;
@@ -58,7 +58,7 @@ public class UIGameplay : MonoBehaviour
 
     private void Update()
     {
-        var localCharacter = CharacterEntity.Local;
+        var localCharacter = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (localCharacter == null)
             return;
 
@@ -163,7 +163,7 @@ public class UIGameplay : MonoBehaviour
         }
     }
 
-    public void UpdateRankings(UserRanking[] rankings)
+    public void UpdateRankings(NetworkGameScore[] rankings)
     {
         for (var i = 0; i < userRankings.Length; ++i)
         {
@@ -172,13 +172,17 @@ public class UIGameplay : MonoBehaviour
             {
                 var ranking = rankings[i];
                 userRanking.SetData(i + 1, ranking);
+
+                var isLocal = BaseNetworkGameCharacter.Local != null && ranking.netId.Equals(BaseNetworkGameCharacter.Local.netId);
+                if (isLocal)
+                    UpdateLocalRank(i + 1, ranking);
             }
             else
                 userRanking.Clear();
         }
     }
 
-    public void UpdateLocalRank(int rank, UserRanking ranking)
+    public void UpdateLocalRank(int rank, NetworkGameScore ranking)
     {
         if (localRanking != null)
             localRanking.SetData(rank, ranking);
@@ -186,7 +190,7 @@ public class UIGameplay : MonoBehaviour
 
     public void AddAttribute(string name)
     {
-        var character = CharacterEntity.Local;
+        var character = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (character == null || character.statPoint == 0)
             return;
         character.CmdAddAttribute(name);
@@ -195,7 +199,7 @@ public class UIGameplay : MonoBehaviour
 
     public void Respawn()
     {
-        var character = CharacterEntity.Local;
+        var character = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (character == null)
             return;
         character.CmdRespawn(false);
@@ -203,7 +207,7 @@ public class UIGameplay : MonoBehaviour
 
     public void WatchAdsRespawn()
     {
-        var character = CharacterEntity.Local;
+        var character = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (character == null)
             return;
 
@@ -219,7 +223,7 @@ public class UIGameplay : MonoBehaviour
     {
         if (result == MonetizationManager.RemakeShowResult.Finished)
         {
-            var character = CharacterEntity.Local;
+            var character = BaseNetworkGameCharacter.Local as CharacterEntity;
             character.CmdRespawn(true);
         }
     }
