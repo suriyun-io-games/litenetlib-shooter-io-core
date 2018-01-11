@@ -26,7 +26,6 @@ public class GameplayManager : NetworkBehaviour
     public UIGameplay uiGameplay;
     [Header("Game rules")]
     public int watchAdsRespawnAvailable = 2;
-    public float updateScoreDuration = 1f;
     public float respawnDuration = 5f;
     public float invincibleDuration = 1.5f;
     public bool autoReload = true;
