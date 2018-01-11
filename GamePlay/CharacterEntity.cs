@@ -14,6 +14,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public Transform damageLaunchTransform;
     public Transform effectTransform;
     public Transform characterModelTransform;
+    public GameObject[] localPlayerObjects;
     [Header("UI")]
     public Transform hpBarContainer;
     public Image hpFillImage;
@@ -21,6 +22,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public Image armorFillImage;
     public Text armorText;
     public Text nameText;
+    public Text levelText;
     [Header("Effect")]
     public GameObject invincibleEffect;
     [Header("Online data")]
@@ -356,6 +358,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
             effectTransform = TempTransform;
         if (characterModelTransform == null)
             characterModelTransform = TempTransform;
+        foreach (var localPlayerObject in localPlayerObjects)
+        {
+            localPlayerObject.SetActive(false);
+        }
     }
 
     public override void OnStartClient()
@@ -389,11 +395,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
         targetCamera = followCam.GetComponent<Camera>();
         GameplayManager.Singleton.uiGameplay.FadeOut();
 
+        foreach (var localPlayerObject in localPlayerObjects)
+        {
+            localPlayerObject.SetActive(true);
+        }
+
         CmdReady();
     }
 
     private void Update()
     {
+        if (isServer && Hp <= 0)
+            attackingActionId = -1;
         if (isServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
             isInvincible = false;
         if (invincibleEffect != null)
@@ -406,6 +419,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
             hpFillImage.fillAmount = (float)hp / (float)TotalHp;
         if (hpText != null)
             hpText.text = hp + "/" + TotalHp;
+        if (levelText != null)
+            levelText.text = level.ToString("N0");
         UpdateAnimation();
 
         // Update button inputs
@@ -527,6 +542,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
         if (isPlayingAttackAnim || isReloading || !CurrentEquippedWeapon.CanShoot())
             return;
+
         if (attackingActionId < 0 && isLocalPlayer)
             CmdAttack();
     }
@@ -547,24 +563,30 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     IEnumerator AttackRoutine(int actionId)
     {
-        if (!isPlayingAttackAnim && !isReloading && CurrentEquippedWeapon.CanShoot() && Hp > 0)
+        if (!isPlayingAttackAnim && 
+            !isReloading && 
+            CurrentEquippedWeapon.CanShoot() && 
+            Hp > 0 &&
+            characterModel != null &&
+            characterModel.TempAnimator != null)
         {
             isPlayingAttackAnim = true;
+            var animator = characterModel.TempAnimator;
+            AttackAnimation attackAnimation;
             if (WeaponData != null &&
-                WeaponData.AttackAnimations.ContainsKey(actionId) &&
-                characterModel != null &&
-                characterModel.TempAnimator != null)
+                WeaponData.AttackAnimations.TryGetValue(actionId, out attackAnimation))
             {
-                var animator = characterModel.TempAnimator;
                 // Play attack animation
-                var attackAnimation = WeaponData.AttackAnimations[actionId];
                 animator.SetBool("DoAction", true);
                 animator.SetInteger("ActionID", attackAnimation.actionId);
+
+                // Wait to launch damage entity
                 var animationDuration = attackAnimation.animationDuration;
                 var launchDuration = attackAnimation.launchDuration;
                 if (launchDuration > animationDuration)
                     launchDuration = animationDuration;
                 yield return new WaitForSeconds(launchDuration);
+
                 // Launch damage entity on server only
                 if (isServer)
                 {
@@ -574,16 +596,21 @@ public class CharacterEntity : BaseNetworkGameCharacter
                     equippedWeapons[selectWeaponIndex] = equippedWeapon;
                     equippedWeapons.Dirty(selectWeaponIndex);
                 }
+
+                // Random play shoot sounds
                 if (WeaponData.attackFx != null && WeaponData.attackFx.Length > 0 && AudioManager.Singleton != null)
                     AudioSource.PlayClipAtPoint(WeaponData.attackFx[Random.Range(0, WeaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+
+                // Wait till animation end
                 yield return new WaitForSeconds(animationDuration - launchDuration);
-                // Attack animation ended
-                animator.SetBool("DoAction", false);
             }
             // If player still attacking, random new attacking action id
             if (isServer && attackingActionId >= 0 && WeaponData != null)
                 attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
             yield return new WaitForEndOfFrame();
+
+            // Attack animation ended
+            animator.SetBool("DoAction", false);
             isPlayingAttackAnim = false;
         }
     }
