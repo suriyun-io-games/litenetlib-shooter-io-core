@@ -15,6 +15,7 @@ public class GameInstance : MonoBehaviour
     public BotData[] bots;
     [Tooltip("Physic layer for characters to avoid it collision")]
     public int characterLayer = 8;
+    public bool showJoystickInEditor = true;
     public string watchAdsRespawnPlacement = "respawnPlacement";
     // An available list, list of item that already unlocked
     public static readonly List<HeadData> AvailableHeads = new List<HeadData>();

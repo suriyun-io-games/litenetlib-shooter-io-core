@@ -65,6 +65,15 @@ public class UIGameplay : MonoBehaviour
             isNetworkActiveDirty = isNetworkActive;
         }
 
+        foreach (var mobileOnlyUi in mobileOnlyUis)
+        {
+            bool showJoystick = Application.isMobilePlatform;
+#if UNITY_EDITOR
+            showJoystick = GameInstance.Singleton.showJoystickInEditor;
+#endif
+            mobileOnlyUi.SetActive(showJoystick);
+        }
+
         var localCharacter = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (localCharacter == null)
             return;
