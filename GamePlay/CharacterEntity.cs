@@ -395,7 +395,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var followCam = FindObjectOfType<FollowCamera>();
         followCam.target = TempTransform;
         targetCamera = followCam.GetComponent<Camera>();
-        GameplayManager.Singleton.uiGameplay.FadeOut();
+        var uiGameplay = FindObjectOfType<UIGameplay>();
+        if (uiGameplay != null)
+            uiGameplay.FadeOut();
 
         foreach (var localPlayerObject in localPlayerObjects)
         {
@@ -846,7 +848,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    protected virtual void OnSpawn() { }
+    public virtual void OnSpawn() { }
 
     [Server]
     public void ServerInvincible()

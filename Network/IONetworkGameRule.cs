@@ -3,6 +3,8 @@ using UnityEngine.Networking;
 
 public class IONetworkGameRule : BaseNetworkGameRule
 {
+    public UIGameplay uiGameplayPrefab;
+
     protected override BaseNetworkGameCharacter NewBot()
     {
         var gameInstance = GameInstance.Singleton;
@@ -52,5 +54,12 @@ public class IONetworkGameRule : BaseNetworkGameRule
             ++targetCharacter.watchAdsCount;
 
         return true;
+    }
+
+    public override void InitialClientObjects(NetworkClient client)
+    {
+        var ui = FindObjectOfType<UIGameplay>();
+        if (ui == null && uiGameplayPrefab != null)
+            Instantiate(uiGameplayPrefab);
     }
 }

@@ -173,13 +173,14 @@ public class BotEntity : CharacterEntity
         return false;
     }
 
-    private void OnCollisionStay(Collision collision)
+    protected override void OnCollisionStay(Collision collision)
     {
+        base.OnCollisionStay(collision);
         if (collision.collider.tag == "Wall")
             isWallHit = true;
     }
 
-    protected override void OnSpawn()
+    public override void OnSpawn()
     {
         base.OnSpawn();
         addStats += startAddStats;
