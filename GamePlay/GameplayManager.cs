@@ -22,8 +22,6 @@ public class GameplayManager : NetworkBehaviour
     public float minAttackVaryRate = -0.07f;
     public float maxAttackVaryRate = 0.07f;
     public CharacterAttributes[] availableAttributes;
-    [Header("UI")]
-    public UIGameplay uiGameplay;
     [Header("Game rules")]
     public int watchAdsRespawnAvailable = 2;
     public float respawnDuration = 5f;

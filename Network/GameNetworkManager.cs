@@ -76,9 +76,9 @@ public class GameNetworkManager : BaseNetworkGameManager
 
     protected override void UpdateScores(NetworkGameScore[] scores)
     {
-        var gameplayManager = GameplayManager.Singleton;
-        if (gameplayManager != null)
-            gameplayManager.uiGameplay.UpdateRankings(scores);
+        var uiGameplay = FindObjectOfType<UIGameplay>();
+        if (uiGameplay != null)
+            uiGameplay.UpdateRankings(scores);
     }
 
     [System.Serializable]
