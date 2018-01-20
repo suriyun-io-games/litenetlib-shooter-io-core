@@ -577,6 +577,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 WeaponData.AttackAnimations.TryGetValue(actionId, out attackAnimation))
             {
                 // Play attack animation
+                animator.SetBool("DoAction", false);
+                yield return new WaitForEndOfFrame();
                 animator.SetBool("DoAction", true);
                 animator.SetInteger("ActionID", attackAnimation.actionId);
 
