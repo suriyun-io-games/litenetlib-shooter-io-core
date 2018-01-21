@@ -132,6 +132,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncVar]
     public CharacterStats addStats;
 
+    public override bool IsDead
+    {
+        get { return hp <= 0; }
+    }
+
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
 
     protected Coroutine attackRoutine;
