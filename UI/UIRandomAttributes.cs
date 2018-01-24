@@ -21,17 +21,21 @@ public class UIRandomAttributes : MonoBehaviour {
     public void Random()
     {
         var gameplay = GameplayManager.Singleton;
+        var dict = new Dictionary<CharacterAttributes, int>();
         var list = gameplay.attributes.Values.ToList();
-        list.Shuffle();
-        var j = 0;
+        foreach (var entry in list)
+        {
+            dict.Add(entry, entry.randomWeight);
+        }
+
         for (var i = 0; i < randomAttributes.Length; ++i)
         {
             var randomAttribute = randomAttributes[i];
             if (randomAttribute != null)
             {
-                var attribute = list[j];
-                randomAttribute.SetAttribute(attribute);
-                ++j;
+                var randomedAttribute = WeightedRandomizer.From(dict).TakeOne();
+                randomAttribute.SetAttribute(randomedAttribute);
+                dict.Remove(randomedAttribute);
             }
         }
     }

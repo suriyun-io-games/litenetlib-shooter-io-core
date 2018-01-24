@@ -132,6 +132,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncVar]
     public CharacterStats addStats;
 
+    [SyncVar]
+    public string extra;
+
     public override bool IsDead
     {
         get { return hp <= 0; }
@@ -616,11 +619,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 animator.SetInteger("ActionID", attackAnimation.actionId);
 
                 // Wait to launch damage entity
+                var speed = attackAnimation.speed;
                 var animationDuration = attackAnimation.animationDuration;
                 var launchDuration = attackAnimation.launchDuration;
                 if (launchDuration > animationDuration)
                     launchDuration = animationDuration;
-                yield return new WaitForSeconds(launchDuration);
+                yield return new WaitForSeconds(launchDuration / speed);
 
                 // Launch damage entity on server only
                 if (isServer)
@@ -637,7 +641,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                     AudioSource.PlayClipAtPoint(WeaponData.attackFx[Random.Range(0, WeaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
 
                 // Wait till animation end
-                yield return new WaitForSeconds(animationDuration - launchDuration);
+                yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
             }
             // If player still attacking, random new attacking action id
             if (isServer && attackingActionId >= 0 && WeaponData != null)
