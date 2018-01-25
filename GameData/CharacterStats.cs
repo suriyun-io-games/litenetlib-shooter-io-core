@@ -8,7 +8,9 @@ public struct CharacterStats
     public int addMaxHp;
     public int addMaxArmor;
     public int addMoveSpeed;
+    public int addInventory;
     public float addWeaponDamageRate;
+    public float addReduceDamageRate;
     public float addArmorReduceDamage;
     public float addExpRate;
     public float addScoreRate;
@@ -22,7 +24,9 @@ public struct CharacterStats
         result.addMaxHp = a.addMaxHp + b.addMaxHp;
         result.addMaxArmor = a.addMaxArmor + b.addMaxArmor;
         result.addMoveSpeed = a.addMoveSpeed + b.addMoveSpeed;
+        result.addInventory = a.addInventory + b.addInventory;
         result.addWeaponDamageRate = a.addWeaponDamageRate + b.addWeaponDamageRate;
+        result.addReduceDamageRate = a.addReduceDamageRate + b.addReduceDamageRate;
         result.addArmorReduceDamage = a.addArmorReduceDamage + b.addArmorReduceDamage;
         result.addExpRate = a.addExpRate + b.addExpRate;
         result.addScoreRate = a.addScoreRate + b.addScoreRate;
@@ -38,7 +42,9 @@ public struct CharacterStats
         result.addMaxHp = a.addMaxHp - b.addMaxHp;
         result.addMaxArmor = a.addMaxArmor - b.addMaxArmor;
         result.addMoveSpeed = a.addMoveSpeed - b.addMoveSpeed;
+        result.addInventory = a.addInventory - b.addInventory;
         result.addWeaponDamageRate = a.addWeaponDamageRate - b.addWeaponDamageRate;
+        result.addReduceDamageRate = a.addReduceDamageRate - b.addReduceDamageRate;
         result.addArmorReduceDamage = a.addArmorReduceDamage - b.addArmorReduceDamage;
         result.addExpRate = a.addExpRate - b.addExpRate;
         result.addScoreRate = a.addScoreRate - b.addScoreRate;

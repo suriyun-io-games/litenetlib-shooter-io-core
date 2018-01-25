@@ -86,7 +86,12 @@ public struct EquippedWeapon
                 }
                 else
                 {
-                    currentAmmo = currentReserveAmmo;
+                    currentAmmo += currentReserveAmmo;
+                    if (currentAmmo >= WeaponData.maxAmmo)
+                    {
+                        returnReserveAmmo = currentAmmo - WeaponData.maxAmmo;
+                        currentAmmo = WeaponData.maxAmmo;
+                    }
                     currentReserveAmmo = 0;
                 }
             }

@@ -10,7 +10,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
     public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public const byte RPC_EFFECT_TRAP_HIT = 2;
-    public const int MAX_EQUIPPABLE_WEAPON_AMOUNT = 10;
     public Transform damageLaunchTransform;
     public Transform effectTransform;
     public Transform characterModelTransform;
@@ -47,6 +46,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                         TargetDead(connectionToClient);
                     deathTime = Time.unscaledTime;
                     isDead = true;
+                    PickableEntities.Clear();
                 }
             }
             if (value > TotalHp)
@@ -117,6 +117,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncVar(hook = "OnHeadChanged")]
     public string selectHead = "";
 
+    [SyncVar(hook = "OnEquipmentsChanged")]
+    public string selectEquipments = "";
+
     [SyncVar(hook = "OnWeaponsChanged")]
     public string selectWeapons = "";
 
@@ -140,7 +143,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         get { return hp <= 0; }
     }
 
+    public readonly Dictionary<uint, PickupEntity> PickableEntities = new Dictionary<uint, PickupEntity>();
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
+    public SyncListEquippedEquipment equippedEquipments = new SyncListEquippedEquipment();
 
     protected Coroutine attackRoutine;
     protected Coroutine reloadRoutine;
@@ -209,17 +214,32 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
+    public CharacterStats SumAddStats
+    {
+        get
+        {
+            var stats = new CharacterStats();
+            stats += addStats;
+            if (headData != null)
+                stats += headData.stats;
+            if (characterData != null)
+                stats += characterData.stats;
+            if (WeaponData != null)
+                stats += WeaponData.stats;
+            foreach (var equippedEquipment in equippedEquipments)
+            {
+                if (equippedEquipment.EquipmentData != null)
+                    stats += equippedEquipment.EquipmentData.stats;
+            }
+            return stats;
+        }
+    }
+
     public int TotalHp
     {
         get
         {
-            var total = GameplayManager.Singleton.baseMaxHp + addStats.addMaxHp;
-            if (headData != null)
-                total += headData.stats.addMaxHp;
-            if (characterData != null)
-                total += characterData.stats.addMaxHp;
-            if (WeaponData != null)
-                total += WeaponData.stats.addMaxHp;
+            var total = GameplayManager.Singleton.baseMaxHp + SumAddStats.addMaxHp;
             return total;
         }
     }
@@ -228,13 +248,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = GameplayManager.Singleton.baseMaxArmor + addStats.addMaxArmor;
-            if (headData != null)
-                total += headData.stats.addMaxArmor;
-            if (characterData != null)
-                total += characterData.stats.addMaxArmor;
-            if (WeaponData != null)
-                total += WeaponData.stats.addMaxArmor;
+            var total = GameplayManager.Singleton.baseMaxArmor + SumAddStats.addMaxArmor;
             return total;
         }
     }
@@ -243,13 +257,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = GameplayManager.Singleton.baseMoveSpeed + addStats.addMoveSpeed;
-            if (headData != null)
-                total += headData.stats.addMoveSpeed;
-            if (characterData != null)
-                total += characterData.stats.addMoveSpeed;
-            if (WeaponData != null)
-                total += WeaponData.stats.addMoveSpeed;
+            var total = GameplayManager.Singleton.baseMoveSpeed + SumAddStats.addMoveSpeed;
+            return total;
+        }
+    }
+
+    public int TotalInventory
+    {
+        get
+        {
+            if (!GameplayManager.Singleton.useInventory)
+                return 0;
+            var total = GameplayManager.Singleton.baseInventory + SumAddStats.addInventory;
             return total;
         }
     }
@@ -258,14 +277,27 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = GameplayManager.Singleton.baseWeaponDamageRate + addStats.addWeaponDamageRate;
-            if (headData != null)
-                total += headData.stats.addWeaponDamageRate;
-            if (characterData != null)
-                total += characterData.stats.addWeaponDamageRate;
-            if (WeaponData != null)
-                total += WeaponData.stats.addWeaponDamageRate;
-            return total;
+            var total = GameplayManager.Singleton.baseWeaponDamageRate + SumAddStats.addWeaponDamageRate;
+
+            var maxValue = GameplayManager.Singleton.maxWeaponDamageRate;
+            if (total < maxValue)
+                return total;
+            else
+                return maxValue;
+        }
+    }
+
+    public float TotalReduceDamageRate
+    {
+        get
+        {
+            var total = GameplayManager.Singleton.baseReduceDamageRate + SumAddStats.addReduceDamageRate;
+
+            var maxValue = GameplayManager.Singleton.maxReduceDamageRate;
+            if (total < maxValue)
+                return total;
+            else
+                return maxValue;
         }
     }
 
@@ -273,14 +305,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = GameplayManager.Singleton.baseArmorReduceDamage + addStats.addArmorReduceDamage;
-            if (headData != null)
-                total += headData.stats.addArmorReduceDamage;
-            if (characterData != null)
-                total += characterData.stats.addArmorReduceDamage;
-            if (WeaponData != null)
-                total += WeaponData.stats.addArmorReduceDamage;
-            return total;
+            var total = GameplayManager.Singleton.baseArmorReduceDamage + SumAddStats.addArmorReduceDamage;
+
+            var maxValue = GameplayManager.Singleton.maxArmorReduceDamage;
+            if (total < maxValue)
+                return total;
+            else
+                return maxValue;
         }
     }
 
@@ -288,13 +319,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addExpRate;
-            if (headData != null)
-                total += headData.stats.addExpRate;
-            if (characterData != null)
-                total += characterData.stats.addExpRate;
-            if (WeaponData != null)
-                total += WeaponData.stats.addExpRate;
+            var total = 1 + SumAddStats.addExpRate;
             return total;
         }
     }
@@ -303,13 +328,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addScoreRate;
-            if (headData != null)
-                total += headData.stats.addScoreRate;
-            if (characterData != null)
-                total += characterData.stats.addScoreRate;
-            if (WeaponData != null)
-                total += WeaponData.stats.addScoreRate;
+            var total = 1 + SumAddStats.addScoreRate;
             return total;
         }
     }
@@ -318,13 +337,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addHpRecoveryRate;
-            if (headData != null)
-                total += headData.stats.addHpRecoveryRate;
-            if (characterData != null)
-                total += characterData.stats.addHpRecoveryRate;
-            if (WeaponData != null)
-                total += WeaponData.stats.addHpRecoveryRate;
+            var total = 1 + SumAddStats.addHpRecoveryRate;
             return total;
         }
     }
@@ -333,13 +346,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addArmorRecoveryRate;
-            if (headData != null)
-                total += headData.stats.addArmorRecoveryRate;
-            if (characterData != null)
-                total += characterData.stats.addArmorRecoveryRate;
-            if (WeaponData != null)
-                total += WeaponData.stats.addArmorRecoveryRate;
+            var total = 1 + SumAddStats.addArmorRecoveryRate;
             return total;
         }
     }
@@ -348,13 +355,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = addStats.addDamageRateLeechHp;
-            if (headData != null)
-                total += headData.stats.addDamageRateLeechHp;
-            if (characterData != null)
-                total += characterData.stats.addDamageRateLeechHp;
-            if (WeaponData != null)
-                total += WeaponData.stats.addDamageRateLeechHp;
+            var total = SumAddStats.addDamageRateLeechHp;
             return total;
         }
     }
@@ -380,6 +381,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             OnHeadChanged(selectHead);
             OnCharacterChanged(selectCharacter);
+            OnEquipmentsChanged(selectEquipments);
             OnWeaponsChanged(selectWeapons);
             OnWeaponChanged(selectWeaponIndex);
         }
@@ -387,7 +389,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public override void OnStartServer()
     {
-        for (var i = 0; i < MAX_EQUIPPABLE_WEAPON_AMOUNT; ++i)
+        var gameInstance = GameInstance.Singleton;
+        for (var i = 0; i < gameInstance.maxEquippableEquipmentAmount; ++i)
+            equippedEquipments.Add(EquippedEquipment.Empty);
+        for (var i = 0; i < gameInstance.maxEquippableWeaponAmount; ++i)
             equippedWeapons.Add(EquippedWeapon.Empty);
         OnHeadChanged(selectHead);
         OnCharacterChanged(selectCharacter);
@@ -705,6 +710,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
         RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
         int reduceHp = damage;
+        reduceHp -= Mathf.CeilToInt(damage * TotalReduceDamageRate);
         if (Armor > 0)
         {
             if (Armor - damage >= 0)
@@ -718,7 +724,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 // Armor remaining less than 0, Reduce HP by remain damage without armor absorb
                 // Armor absorb damage
                 reduceHp -= Mathf.CeilToInt(Armor * TotalArmorReduceDamage);
-                // Remain damage
+                // Remain damage after armor broke
                 reduceHp -= Mathf.Abs(Armor - damage);
                 Armor = 0;
             }
@@ -803,6 +809,31 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return;
         if (characterModel != null && WeaponData != null)
             characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
+    }
+
+    protected virtual void OnEquipmentsChanged(string value)
+    {
+        selectEquipments = value;
+        // Changes equipment list
+        if (isServer)
+        {
+            var splitedData = selectEquipments.Split('|');
+            for (var i = 0; i < splitedData.Length; ++i)
+            {
+                var singleData = splitedData[i];
+                var equipmentData = GameInstance.GetEquipment(singleData);
+
+                if (equipmentData == null)
+                    continue;
+
+                var equipPos = equipmentData.equipPosition;
+
+                var equippedEquipment = new EquippedEquipment();
+                equippedEquipment.equipmentId = equipmentData.GetId();
+                equippedEquipments[equipPos] = equippedEquipment;
+                equippedEquipments.Dirty(equipPos);
+            }
+        }
     }
 
     protected virtual void OnWeaponsChanged(string value)
@@ -893,6 +924,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerRevive()
     {
+        for (var i = 0; i < equippedEquipments.Count; ++i)
+        {
+            equippedEquipments[i] = EquippedEquipment.Empty;
+            equippedEquipments.Dirty(i);
+        }
+
         for (var i = 0; i < equippedWeapons.Count; ++i)
         {
             var equippedWeapon = equippedWeapons[i];
@@ -926,7 +963,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerChangeWeapon(int index)
     {
-        if (index >= 0 && index < MAX_EQUIPPABLE_WEAPON_AMOUNT && !equippedWeapons[index].IsEmpty())
+        var gameInstance = GameInstance.Singleton;
+        if (index >= 0 && index < gameInstance.maxEquippableWeaponAmount && !equippedWeapons[index].IsEmpty())
         {
             selectWeaponIndex = index;
             InterruptAttack();
@@ -937,12 +975,32 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [Server]
-    public bool ServerChangeEquippedWeapon(WeaponData weaponData, int ammoAmount)
+    public bool ServerChangeSelectEquipment(EquipmentData equipmentData, out EquipmentData oldEquipment)
     {
-        if (weaponData == null || weaponData.equipPosition < 0 || weaponData.equipPosition >= equippedWeapons.Count)
+        oldEquipment = null;
+        if (equipmentData == null || string.IsNullOrEmpty(equipmentData.GetId()) || equipmentData.equipPosition < 0 || equipmentData.equipPosition >= equippedEquipments.Count)
+            return false;
+        var equipPosition = equipmentData.equipPosition;
+        var equippedEquipment = equippedEquipments[equipPosition];
+        oldEquipment = equippedEquipment.EquipmentData;
+        var updated = equippedEquipment.ChangeEquipmentId(equipmentData.GetId());
+        if (updated)
+        {
+            equippedEquipments[equipPosition] = equippedEquipment;
+            equippedEquipments.Dirty(equipPosition);
+        }
+        return updated;
+    }
+
+    [Server]
+    public bool ServerChangeSelectWeapon(WeaponData weaponData, int ammoAmount, out WeaponData oldWeapon)
+    {
+        oldWeapon = null;
+        if (weaponData == null || string.IsNullOrEmpty(weaponData.GetId()) || weaponData.equipPosition < 0 || weaponData.equipPosition >= equippedWeapons.Count)
             return false;
         var equipPosition = weaponData.equipPosition;
         var equippedWeapon = equippedWeapons[equipPosition];
+        oldWeapon = equippedWeapon.WeaponData;
         var updated = equippedWeapon.ChangeWeaponId(weaponData.GetId(), ammoAmount);
         if (updated)
         {

@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class WeaponData : ItemData
+public class WeaponData : BasePickupItemData
 {
     public GameObject rightHandObject;
     public GameObject leftHandObject;
@@ -12,8 +12,6 @@ public class WeaponData : ItemData
     public List<AttackAnimation> attackAnimations;
     public DamageEntity damagePrefab;
     public int damage;
-    [Range(0, CharacterEntity.MAX_EQUIPPABLE_WEAPON_AMOUNT - 1)]
-    public int equipPosition;
     [Header("Reload")]
     public bool reloadOneAmmoAtATime;
     public float reloadDuration;

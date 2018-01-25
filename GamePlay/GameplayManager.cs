@@ -16,8 +16,13 @@ public class GameplayManager : NetworkBehaviour
     public int baseMaxHp = 100;
     public int baseMaxArmor = 100;
     public int baseMoveSpeed = 30;
+    public int baseInventory = 0;
     public float baseWeaponDamageRate = 1f;
+    public float baseReduceDamageRate = 0f;
     public float baseArmorReduceDamage = 0.3f;
+    public float maxWeaponDamageRate = 2f;
+    public float maxReduceDamageRate = 0.6f;
+    public float maxArmorReduceDamage = 0.6f;
     public int addingStatPoint = 1;
     public float minAttackVaryRate = -0.07f;
     public float maxAttackVaryRate = 0.07f;
@@ -27,6 +32,8 @@ public class GameplayManager : NetworkBehaviour
     public float respawnDuration = 5f;
     public float invincibleDuration = 1.5f;
     public bool autoReload = true;
+    public bool autoPickup = false;
+    public bool useInventory = false;
     public SpawnArea[] characterSpawnAreas;
     public SpawnArea[] powerUpSpawnAreas;
     public SpawnArea[] pickupSpawnAreas;
@@ -90,11 +97,16 @@ public class GameplayManager : NetworkBehaviour
 
     public void SpawnPowerUp(string prefabName)
     {
+        SpawnPowerUp(prefabName, GetPowerUpSpawnPosition());
+    }
+
+    public void SpawnPowerUp(string prefabName, Vector3 position)
+    {
         if (!isServer || string.IsNullOrEmpty(prefabName))
             return;
         PowerUpEntity powerUpPrefab = null;
         if (powerUpEntities.TryGetValue(prefabName, out powerUpPrefab)) {
-            var powerUpEntity = Instantiate(powerUpPrefab, GetPowerUpSpawnPosition(), Quaternion.identity);
+            var powerUpEntity = Instantiate(powerUpPrefab, position, Quaternion.identity);
             powerUpEntity.prefabName = prefabName;
             NetworkServer.Spawn(powerUpEntity.gameObject);
         }
@@ -102,12 +114,17 @@ public class GameplayManager : NetworkBehaviour
 
     public void SpawnPickup(string prefabName)
     {
+        SpawnPickup(prefabName, GetPickupSpawnPosition());
+    }
+
+    public void SpawnPickup(string prefabName, Vector3 position)
+    {
         if (!isServer || string.IsNullOrEmpty(prefabName))
             return;
         PickupEntity pickupPrefab = null;
         if (pickupEntities.TryGetValue(prefabName, out pickupPrefab))
         {
-            var pickupEntity = Instantiate(pickupPrefab, GetPickupSpawnPosition(), Quaternion.identity);
+            var pickupEntity = Instantiate(pickupPrefab, position, Quaternion.identity);
             pickupEntity.prefabName = prefabName;
             NetworkServer.Spawn(pickupEntity.gameObject);
         }

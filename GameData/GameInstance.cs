@@ -10,8 +10,11 @@ public class GameInstance : BaseNetworkGameInstance
     public BotEntity botPrefab;
     public CharacterData[] characters;
     public HeadData[] heads;
+    public EquipmentData[] equipments;
     public WeaponData[] weapons;
     public BotData[] bots;
+    public int maxEquippableEquipmentAmount = 10;
+    public int maxEquippableWeaponAmount = 10;
     [Tooltip("Physic layer for characters to avoid it collision")]
     public int characterLayer = 8;
     public bool showJoystickInEditor = true;
@@ -19,10 +22,12 @@ public class GameInstance : BaseNetworkGameInstance
     // An available list, list of item that already unlocked
     public static readonly List<HeadData> AvailableHeads = new List<HeadData>();
     public static readonly List<CharacterData> AvailableCharacters = new List<CharacterData>();
+    public static readonly List<EquipmentData> AvailableEquipments = new List<EquipmentData>();
     public static readonly List<WeaponData> AvailableWeapons = new List<WeaponData>();
     // All item list
     public static readonly Dictionary<string, HeadData> Heads = new Dictionary<string, HeadData>();
     public static readonly Dictionary<string, CharacterData> Characters = new Dictionary<string, CharacterData>();
+    public static readonly Dictionary<string, EquipmentData> Equipments = new Dictionary<string, EquipmentData>();
     public static readonly Dictionary<string, WeaponData> Weapons = new Dictionary<string, WeaponData>();
     protected override void Awake()
     {
@@ -49,9 +54,15 @@ public class GameInstance : BaseNetworkGameInstance
         }
 
         Characters.Clear();
-        foreach (var characterModel in characters)
+        foreach (var character in characters)
         {
-            Characters.Add(characterModel.GetId(), characterModel);
+            Characters.Add(character.GetId(), character);
+        }
+
+        Equipments.Clear();
+        foreach (var equipment in equipments)
+        {
+            Equipments.Add(equipment.GetId(), equipment);
         }
 
         Weapons.Clear();
@@ -84,6 +95,13 @@ public class GameInstance : BaseNetworkGameInstance
                 AvailableCharacters.Add(character);
         }
 
+        AvailableEquipments.Clear();
+        foreach (var equipment in equipments)
+        {
+            if (equipment != null && equipment.IsUnlock())
+                AvailableEquipments.Add(equipment);
+        }
+
         AvailableWeapons.Clear();
         foreach (var weapon in weapons)
         {
@@ -102,8 +120,39 @@ public class GameInstance : BaseNetworkGameInstance
         if (character < 0 || character >= AvailableCharacters.Count)
             PlayerSave.SetCharacter(0);
 
-
         // Initial first player save
+        // Equipments
+        var savedEquipments = PlayerSave.GetEquipments();
+        if (savedEquipments.Count == 0)
+        {
+            var savingEquipments = new Dictionary<int, int>();
+            for (var i = 0; i < AvailableEquipments.Count; ++i)
+            {
+                var savingEquipment = AvailableEquipments[i];
+                var equipPosition = savingEquipment.equipPosition;
+                if (!savingEquipments.ContainsKey(equipPosition))
+                    savingEquipments[equipPosition] = i;
+            }
+            PlayerSave.SetEquipments(savingEquipments);
+        }
+        else
+        {
+            var savingEquipments = new Dictionary<int, int>();
+            foreach (var savedEquipment in savedEquipments)
+            {
+                var equippedPosition = savedEquipment.Key;
+                var availableIndex = savedEquipment.Value;
+                if (availableIndex >= 0 && availableIndex < AvailableEquipments.Count)
+                {
+                    var savingEquipment = AvailableEquipments[availableIndex];
+                    var equipPosition = savingEquipment.equipPosition;
+                    if (!savingEquipments.ContainsKey(equipPosition))
+                        savingEquipments[equipPosition] = availableIndex;
+                }
+            }
+            PlayerSave.SetEquipments(savingEquipments);
+        }
+        // Weapons
         var savedWeapons = PlayerSave.GetWeapons();
         if (savedWeapons.Count == 0)
         {
@@ -123,13 +172,13 @@ public class GameInstance : BaseNetworkGameInstance
             foreach (var savedWeapon in savedWeapons)
             {
                 var equippedPosition = savedWeapon.Key;
-                var availableWeaponIndex = savedWeapon.Value;
-                if (availableWeaponIndex >= 0 && availableWeaponIndex < AvailableWeapons.Count)
+                var availableIndex = savedWeapon.Value;
+                if (availableIndex >= 0 && availableIndex < AvailableWeapons.Count)
                 {
-                    var savingWeapon = AvailableWeapons[availableWeaponIndex];
+                    var savingWeapon = AvailableWeapons[availableIndex];
                     var equipPosition = savingWeapon.equipPosition;
                     if (!savingWeapons.ContainsKey(equipPosition))
-                        savingWeapons[equipPosition] = availableWeaponIndex;
+                        savingWeapons[equipPosition] = availableIndex;
                 }
             }
             PlayerSave.SetWeapons(savingWeapons);
@@ -151,6 +200,15 @@ public class GameInstance : BaseNetworkGameInstance
             return null;
         CharacterData result;
         Characters.TryGetValue(key, out result);
+        return result;
+    }
+
+    public static EquipmentData GetEquipment(string key)
+    {
+        if (Equipments.Count == 0)
+            return null;
+        EquipmentData result;
+        Equipments.TryGetValue(key, out result);
         return result;
     }
 
@@ -179,6 +237,15 @@ public class GameInstance : BaseNetworkGameInstance
         if (index <= 0 || index >= AvailableCharacters.Count)
             index = 0;
         return AvailableCharacters[index];
+    }
+
+    public static EquipmentData GetAvailableEquipment(int index)
+    {
+        if (AvailableEquipments.Count == 0)
+            return null;
+        if (index <= 0 || index >= AvailableEquipments.Count)
+            index = 0;
+        return AvailableEquipments[index];
     }
 
     public static WeaponData GetAvailableWeapon(int index)

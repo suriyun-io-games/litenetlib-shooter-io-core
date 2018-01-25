@@ -17,13 +17,28 @@ public class GameNetworkManager : BaseNetworkGameManager
         msg.playerName = PlayerSave.GetPlayerName();
         msg.selectHead = GameInstance.GetAvailableHead(PlayerSave.GetHead()).GetId();
         msg.selectCharacter = GameInstance.GetAvailableCharacter(PlayerSave.GetCharacter()).GetId();
+        // Equipments
+        var savedEquipments = PlayerSave.GetEquipments();
+        var selectEquipments = "";
+        foreach (var savedEquipment in savedEquipments)
+        {
+            if (!string.IsNullOrEmpty(selectEquipments))
+                selectEquipments += "|";
+            var data = GameInstance.GetAvailableEquipment(savedEquipment.Value);
+            if (data != null)
+                selectEquipments += data.GetId();
+        }
+        msg.selectEquipments = selectEquipments;
+        // Weapons
         var savedWeapons = PlayerSave.GetWeapons();
         var selectWeapons = "";
         foreach (var savedWeapon in savedWeapons)
         {
             if (!string.IsNullOrEmpty(selectWeapons))
                 selectWeapons += "|";
-            selectWeapons += GameInstance.GetAvailableWeapon(savedWeapon.Value).GetId();
+            var data = GameInstance.GetAvailableWeapon(savedWeapon.Value);
+            if (data != null)
+                selectWeapons += data.GetId();
         }
         msg.selectWeapons = selectWeapons;
         return msg;
@@ -70,6 +85,7 @@ public class GameNetworkManager : BaseNetworkGameManager
         character.playerName = joinMessage.playerName;
         character.selectHead = joinMessage.selectHead;
         character.selectCharacter = joinMessage.selectCharacter;
+        character.selectEquipments = joinMessage.selectEquipments;
         character.selectWeapons = joinMessage.selectWeapons;
         character.extra = joinMessage.extra;
         return character;
@@ -88,6 +104,7 @@ public class GameNetworkManager : BaseNetworkGameManager
         public string playerName;
         public string selectHead;
         public string selectCharacter;
+        public string selectEquipments;
         public string selectWeapons;
         public string extra;
     }

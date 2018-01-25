@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class UIWeaponSelectList : UIBase
 {
-    [Range(0, CharacterEntity.MAX_EQUIPPABLE_WEAPON_AMOUNT - 1)]
     public int equipPosition;
     public UIWeaponSelectEntry prefab;
     public Transform container;
