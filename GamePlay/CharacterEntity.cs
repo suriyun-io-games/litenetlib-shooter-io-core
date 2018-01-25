@@ -262,17 +262,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public int TotalInventory
-    {
-        get
-        {
-            if (!GameplayManager.Singleton.useInventory)
-                return 0;
-            var total = GameplayManager.Singleton.baseInventory + SumAddStats.addInventory;
-            return total;
-        }
-    }
-
     public float TotalWeaponDamageRate
     {
         get
@@ -975,14 +964,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [Server]
-    public bool ServerChangeSelectEquipment(EquipmentData equipmentData, out EquipmentData oldEquipment)
+    public bool ServerChangeSelectEquipment(EquipmentData equipmentData)
     {
-        oldEquipment = null;
         if (equipmentData == null || string.IsNullOrEmpty(equipmentData.GetId()) || equipmentData.equipPosition < 0 || equipmentData.equipPosition >= equippedEquipments.Count)
             return false;
         var equipPosition = equipmentData.equipPosition;
         var equippedEquipment = equippedEquipments[equipPosition];
-        oldEquipment = equippedEquipment.EquipmentData;
         var updated = equippedEquipment.ChangeEquipmentId(equipmentData.GetId());
         if (updated)
         {
@@ -993,14 +980,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [Server]
-    public bool ServerChangeSelectWeapon(WeaponData weaponData, int ammoAmount, out WeaponData oldWeapon)
+    public bool ServerChangeSelectWeapon(WeaponData weaponData, int ammoAmount)
     {
-        oldWeapon = null;
         if (weaponData == null || string.IsNullOrEmpty(weaponData.GetId()) || weaponData.equipPosition < 0 || weaponData.equipPosition >= equippedWeapons.Count)
             return false;
         var equipPosition = weaponData.equipPosition;
         var equippedWeapon = equippedWeapons[equipPosition];
-        oldWeapon = equippedWeapon.WeaponData;
         var updated = equippedWeapon.ChangeWeaponId(weaponData.GetId(), ammoAmount);
         if (updated)
         {

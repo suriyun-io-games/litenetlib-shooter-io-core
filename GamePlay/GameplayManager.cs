@@ -16,7 +16,6 @@ public class GameplayManager : NetworkBehaviour
     public int baseMaxHp = 100;
     public int baseMaxArmor = 100;
     public int baseMoveSpeed = 30;
-    public int baseInventory = 0;
     public float baseWeaponDamageRate = 1f;
     public float baseReduceDamageRate = 0f;
     public float baseArmorReduceDamage = 0.3f;
@@ -33,7 +32,6 @@ public class GameplayManager : NetworkBehaviour
     public float invincibleDuration = 1.5f;
     public bool autoReload = true;
     public bool autoPickup = false;
-    public bool useInventory = false;
     public SpawnArea[] characterSpawnAreas;
     public SpawnArea[] powerUpSpawnAreas;
     public SpawnArea[] pickupSpawnAreas;
