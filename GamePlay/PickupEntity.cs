@@ -55,11 +55,6 @@ public class PickupEntity : NetworkBehaviour
         if (itemData == null && weaponData != null)
             itemData = weaponData;
         weaponData = null;
-        if (type == PickupType.WeaponOrEquipment && itemData != null && itemData.pickupEntity != this)
-        {
-            itemData.pickupEntity = this;
-            EditorUtility.SetDirty(itemData);
-        }
         EditorUtility.SetDirty(this);
     }
 #endif
@@ -80,15 +75,9 @@ public class PickupEntity : NetworkBehaviour
                 {
                     case PickupType.WeaponOrEquipment:
                         if (itemData is EquipmentData)
-                        {
-                            EquipmentData oldEquipment = null;
-                            isPickedup = character.ServerChangeSelectEquipment(itemData as EquipmentData, out oldEquipment);
-                        }
+                            isPickedup = character.ServerChangeSelectEquipment(itemData as EquipmentData);
                         if (itemData is WeaponData)
-                        {
-                            WeaponData oldWeapon = null;
-                            isPickedup = character.ServerChangeSelectWeapon(itemData as WeaponData, ammoAmount, out oldWeapon);
-                        }
+                            isPickedup = character.ServerChangeSelectWeapon(itemData as WeaponData, ammoAmount);
                         break;
                     case PickupType.Ammo:
                         if (itemData is WeaponData)
