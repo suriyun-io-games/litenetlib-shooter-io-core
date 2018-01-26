@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 public class PickupEntity : NetworkBehaviour
 {
@@ -18,7 +15,6 @@ public class PickupEntity : NetworkBehaviour
     public string prefabName;
     public PickupType type;
     public WeaponData weaponData;
-    public WeaponData itemData;
     public int ammoAmount;
     private bool isDead;
 
@@ -47,19 +43,6 @@ public class PickupEntity : NetworkBehaviour
         var collider = GetComponent<Collider>();
         collider.isTrigger = true;
     }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        /*
-        if (itemData == null && weaponData != null)
-            itemData = weaponData;
-        weaponData = null;
-        */
-        weaponData = itemData;
-        EditorUtility.SetDirty(this);
-    }
-#endif
 
     private void OnTriggerEnter(Collider other)
     {
