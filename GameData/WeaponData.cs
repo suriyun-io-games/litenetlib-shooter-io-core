@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 
 public class WeaponData : ItemData
 {
-    [Range(0, CharacterEntity.MAX_EQUIPPABLE_WEAPON_AMOUNT)]
+    [Range(0, CharacterEntity.MAX_EQUIPPABLE_WEAPON_AMOUNT - 1)]
     public int equipPosition;
     public GameObject rightHandObject;
     public GameObject leftHandObject;
