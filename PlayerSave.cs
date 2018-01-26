@@ -7,7 +7,6 @@ public class PlayerSave
     public const string KeyPlayerName = "SavePlayerName";
     public const string KeyCharacter = "SaveSelectCharacter";
     public const string KeyHead = "SaveSelectHead";
-    public const string KeyEquipments = "SaveSelectEquipments";
     public const string KeyWeapons = "SaveSelectWeapons";
 
     public static string GetPlayerName()
@@ -42,34 +41,6 @@ public class PlayerSave
     public static void SetHead(int value)
     {
         PlayerPrefs.SetInt(KeyHead, value);
-        PlayerPrefs.Save();
-    }
-
-    public static Dictionary<int, int> GetEquipments()
-    {
-        var data = PlayerPrefs.GetString(KeyEquipments);
-        var splitedData = data.Split('|');
-        Dictionary<int, int> equipments = new Dictionary<int, int>();
-        foreach (var singleData in splitedData)
-        {
-            var splitedKeyPair = singleData.Split(':');
-            if (splitedKeyPair.Length == 2)
-                equipments.Add(int.Parse(splitedKeyPair[0]), int.Parse(splitedKeyPair[1]));
-        }
-        return equipments;
-    }
-
-    public static void SetEquipments(Dictionary<int, int> values)
-    {
-
-        var data = "";
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrEmpty(data))
-                data += "|";
-            data += value.Key + ":" + value.Value;
-        }
-        PlayerPrefs.SetString(KeyEquipments, data);
         PlayerPrefs.Save();
     }
 

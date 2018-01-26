@@ -10,6 +10,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
     public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public const byte RPC_EFFECT_TRAP_HIT = 2;
+    public const int MAX_EQUIPPABLE_WEAPON_AMOUNT = 10;
     public Transform damageLaunchTransform;
     public Transform effectTransform;
     public Transform characterModelTransform;
@@ -117,9 +118,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncVar(hook = "OnHeadChanged")]
     public string selectHead = "";
 
-    [SyncVar(hook = "OnEquipmentsChanged")]
-    public string selectEquipments = "";
-
     [SyncVar(hook = "OnWeaponsChanged")]
     public string selectWeapons = "";
 
@@ -145,7 +143,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public readonly Dictionary<uint, PickupEntity> PickableEntities = new Dictionary<uint, PickupEntity>();
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
-    public SyncListEquippedEquipment equippedEquipments = new SyncListEquippedEquipment();
 
     protected Coroutine attackRoutine;
     protected Coroutine reloadRoutine;
@@ -226,11 +223,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 stats += characterData.stats;
             if (WeaponData != null)
                 stats += WeaponData.stats;
-            foreach (var equippedEquipment in equippedEquipments)
-            {
-                if (equippedEquipment.EquipmentData != null)
-                    stats += equippedEquipment.EquipmentData.stats;
-            }
             return stats;
         }
     }
@@ -370,7 +362,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             OnHeadChanged(selectHead);
             OnCharacterChanged(selectCharacter);
-            OnEquipmentsChanged(selectEquipments);
             OnWeaponsChanged(selectWeapons);
             OnWeaponChanged(selectWeaponIndex);
         }
@@ -378,10 +369,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public override void OnStartServer()
     {
-        var gameInstance = GameInstance.Singleton;
-        for (var i = 0; i < gameInstance.maxEquippableEquipmentAmount; ++i)
-            equippedEquipments.Add(EquippedEquipment.Empty);
-        for (var i = 0; i < gameInstance.maxEquippableWeaponAmount; ++i)
+        for (var i = 0; i < MAX_EQUIPPABLE_WEAPON_AMOUNT; ++i)
             equippedWeapons.Add(EquippedWeapon.Empty);
         OnHeadChanged(selectHead);
         OnCharacterChanged(selectCharacter);
@@ -800,31 +788,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
             characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
     }
 
-    protected virtual void OnEquipmentsChanged(string value)
-    {
-        selectEquipments = value;
-        // Changes equipment list
-        if (isServer)
-        {
-            var splitedData = selectEquipments.Split('|');
-            for (var i = 0; i < splitedData.Length; ++i)
-            {
-                var singleData = splitedData[i];
-                var equipmentData = GameInstance.GetEquipment(singleData);
-
-                if (equipmentData == null)
-                    continue;
-
-                var equipPos = equipmentData.equipPosition;
-
-                var equippedEquipment = new EquippedEquipment();
-                equippedEquipment.equipmentId = equipmentData.GetId();
-                equippedEquipments[equipPos] = equippedEquipment;
-                equippedEquipments.Dirty(equipPos);
-            }
-        }
-    }
-
     protected virtual void OnWeaponsChanged(string value)
     {
         selectWeapons = value;
@@ -913,12 +876,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerRevive()
     {
-        for (var i = 0; i < equippedEquipments.Count; ++i)
-        {
-            equippedEquipments[i] = EquippedEquipment.Empty;
-            equippedEquipments.Dirty(i);
-        }
-
         for (var i = 0; i < equippedWeapons.Count; ++i)
         {
             var equippedWeapon = equippedWeapons[i];
@@ -953,7 +910,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public void ServerChangeWeapon(int index)
     {
         var gameInstance = GameInstance.Singleton;
-        if (index >= 0 && index < gameInstance.maxEquippableWeaponAmount && !equippedWeapons[index].IsEmpty())
+        if (index >= 0 && index < MAX_EQUIPPABLE_WEAPON_AMOUNT && !equippedWeapons[index].IsEmpty())
         {
             selectWeaponIndex = index;
             InterruptAttack();
@@ -961,22 +918,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
             RpcInterruptAttack();
             RpcInterruptReload();
         }
-    }
-
-    [Server]
-    public bool ServerChangeSelectEquipment(EquipmentData equipmentData)
-    {
-        if (equipmentData == null || string.IsNullOrEmpty(equipmentData.GetId()) || equipmentData.equipPosition < 0 || equipmentData.equipPosition >= equippedEquipments.Count)
-            return false;
-        var equipPosition = equipmentData.equipPosition;
-        var equippedEquipment = equippedEquipments[equipPosition];
-        var updated = equippedEquipment.ChangeEquipmentId(equipmentData.GetId());
-        if (updated)
-        {
-            equippedEquipments[equipPosition] = equippedEquipment;
-            equippedEquipments.Dirty(equipPosition);
-        }
-        return updated;
     }
 
     [Server]

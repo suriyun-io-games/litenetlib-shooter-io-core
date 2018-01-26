@@ -4,8 +4,10 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class WeaponData : BasePickupItemData
+public class WeaponData : ItemData
 {
+    [Range(0, CharacterEntity.MAX_EQUIPPABLE_WEAPON_AMOUNT)]
+    public int equipPosition;
     public GameObject rightHandObject;
     public GameObject leftHandObject;
     public GameObject shieldObject;

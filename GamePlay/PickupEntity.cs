@@ -10,37 +10,36 @@ public class PickupEntity : NetworkBehaviour
 {
     public enum PickupType
     {
-        WeaponOrEquipment,
+        Weapon,
         Ammo,
     }
     // We're going to respawn this item so I decide to keep its prefab name to spawning when character triggered
     [HideInInspector]
     public string prefabName;
     public PickupType type;
-    [System.Obsolete]
     public WeaponData weaponData;
-    public BasePickupItemData itemData;
+    public WeaponData itemData;
     public int ammoAmount;
     private bool isDead;
 
     public Texture IconTexture
     {
-        get { return itemData.iconTexture; }
+        get { return weaponData.iconTexture; }
     }
 
     public Texture PreviewTexture
     {
-        get { return itemData.previewTexture; }
+        get { return weaponData.previewTexture; }
     }
 
     public string Title
     {
-        get { return itemData.GetTitle(); }
+        get { return weaponData.GetTitle(); }
     }
 
     public string Description
     {
-        get { return itemData.GetDescription(); }
+        get { return weaponData.GetDescription(); }
     }
 
     private void Awake()
@@ -52,9 +51,12 @@ public class PickupEntity : NetworkBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
+        /*
         if (itemData == null && weaponData != null)
             itemData = weaponData;
         weaponData = null;
+        */
+        weaponData = itemData;
         EditorUtility.SetDirty(this);
     }
 #endif
@@ -73,15 +75,11 @@ public class PickupEntity : NetworkBehaviour
                 bool isPickedup = false;
                 switch (type)
                 {
-                    case PickupType.WeaponOrEquipment:
-                        if (itemData is EquipmentData)
-                            isPickedup = character.ServerChangeSelectEquipment(itemData as EquipmentData);
-                        if (itemData is WeaponData)
-                            isPickedup = character.ServerChangeSelectWeapon(itemData as WeaponData, ammoAmount);
+                    case PickupType.Weapon:
+                        isPickedup = character.ServerChangeSelectWeapon(weaponData, ammoAmount);
                         break;
                     case PickupType.Ammo:
-                        if (itemData is WeaponData)
-                            isPickedup = character.ServerFillWeaponAmmo(itemData as WeaponData, ammoAmount);
+                        isPickedup = character.ServerFillWeaponAmmo(weaponData, ammoAmount);
                         break;
                 }
                 // Destroy this on all clients
