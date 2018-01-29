@@ -14,16 +14,17 @@ public class UIGameplay : MonoBehaviour
     public Text textArmor;
     public Text textRespawnCountDown;
     public Text textWatchedAdsCount;
+    public Text textMatchCountDown;
     public UIBlackFade blackFade;
     public GameObject respawnUiContainer;
     public GameObject respawnButtonContainer;
     public GameObject reloadTimeContainer;
     public Image fillReloadTime;
     public Text textReloadTimePercent;
+    public UINetworkGameScores[] uiGameScores;
     public UIRandomAttributes randomAttributes;
     public UIEquippedWeapon[] equippedWeapons;
-    public UINetworkGameScoreEntry[] userRankings;
-    public UINetworkGameScoreEntry localRanking;
+    public GameObject matchEndUi;
     public GameObject[] mobileOnlyUis;
     public GameObject[] hidingIfDedicateServerUis;
     private bool isNetworkActiveDirty;
@@ -167,31 +168,38 @@ public class UIGameplay : MonoBehaviour
             if (reloadTimeContainer != null)
                 reloadTimeContainer.SetActive(false);
         }
+
+        if (textMatchCountDown != null)
+        {
+            if (localCharacter.NetworkManager != null)
+            {
+                var formattedTime = string.Empty;
+                var timer = localCharacter.NetworkManager.RemainsMatchTime;
+                if (timer > 0f)
+                {
+                    int minutes = Mathf.FloorToInt(timer / 60f);
+                    int seconds = Mathf.FloorToInt(timer - minutes * 60);
+                    formattedTime = string.Format("{0:0}:{1:00}", minutes, seconds);
+                }
+                textMatchCountDown.text = formattedTime;
+            }
+        }
+
+        if (matchEndUi != null)
+        {
+            if (localCharacter.NetworkManager != null)
+                matchEndUi.SetActive(localCharacter.NetworkManager.IsMatchEnded);
+        }
     }
 
     public void UpdateRankings(NetworkGameScore[] rankings)
     {
-        for (var i = 0; i < userRankings.Length; ++i)
+        for (var i = 0; i < uiGameScores.Length; ++i)
         {
-            var userRanking = userRankings[i];
-            if (i < rankings.Length)
-            {
-                var ranking = rankings[i];
-                userRanking.SetData(i + 1, ranking);
-
-                var isLocal = BaseNetworkGameCharacter.Local != null && ranking.netId.Equals(BaseNetworkGameCharacter.Local.netId);
-                if (isLocal)
-                    UpdateLocalRank(i + 1, ranking);
-            }
-            else
-                userRanking.Clear();
+            var uiGameScore = uiGameScores[i];
+            if (uiGameScore != null)
+                uiGameScore.UpdateRankings(rankings);
         }
-    }
-
-    public void UpdateLocalRank(int rank, NetworkGameScore ranking)
-    {
-        if (localRanking != null)
-            localRanking.SetData(rank, ranking);
     }
 
     public void AddAttribute(string name)
