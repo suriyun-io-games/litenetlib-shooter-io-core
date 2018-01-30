@@ -53,13 +53,14 @@ public class PickupEntity : NetworkBehaviour
         var character = other.GetComponent<CharacterEntity>();
         if (character != null && character.Hp > 0)
         {
-            if (isServer && gameplayManager.autoPickup)
+            if (isServer)
             {
                 bool isPickedup = false;
                 switch (type)
                 {
                     case PickupType.Weapon:
-                        isPickedup = character.ServerChangeSelectWeapon(weaponData, ammoAmount);
+                        if (gameplayManager.autoPickup)
+                            isPickedup = character.ServerChangeSelectWeapon(weaponData, ammoAmount);
                         break;
                     case PickupType.Ammo:
                         isPickedup = character.ServerFillWeaponAmmo(weaponData, ammoAmount);
