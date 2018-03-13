@@ -6,12 +6,19 @@ using UnityEngine.Networking;
 
 public class GameplayManager : NetworkBehaviour
 {
+    [System.Serializable]
+    public struct RewardCurrency
+    {
+        public string currencyId;
+        public IntAttribute amount;
+    }
     public const float REAL_MOVE_SPEED_RATE = 0.1f;
     public static GameplayManager Singleton { get; private set; }
     [Header("Character stats")]
     public int maxLevel = 1000;
     public IntAttribute exp = new IntAttribute() { minValue = 20, maxValue = 1023050, growth = 2.5f };
     public IntAttribute rewardExp = new IntAttribute() { minValue = 8, maxValue = 409220, growth = 2.5f };
+    public RewardCurrency[] rewardCurrencies;
     public IntAttribute killScore = new IntAttribute() { minValue = 10, maxValue = 511525, growth = 1f };
     public int baseMaxHp = 100;
     public int baseMaxArmor = 100;

@@ -746,8 +746,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         var gameplayManager = GameplayManager.Singleton;
         var targetLevel = target.level;
+        var maxLevel = gameplayManager.maxLevel;
         Exp += Mathf.CeilToInt(gameplayManager.GetRewardExp(targetLevel) * TotalExpRate);
         score += Mathf.CeilToInt(gameplayManager.GetKillScore(targetLevel) * TotalScoreRate);
+        if (connectionToClient != null)
+        {
+            foreach (var rewardCurrency in gameplayManager.rewardCurrencies)
+            {
+                var currencyId = rewardCurrency.currencyId;
+                var amount = rewardCurrency.amount.Calculate(targetLevel, maxLevel);
+                TargetRewardCurrency(connectionToClient, currencyId, amount);
+            }
+        }
         ++killCount;
     }
 
@@ -1117,5 +1127,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
     private void TargetSpawn(NetworkConnection conn, Vector3 position)
     {
         transform.position = position;
+    }
+
+    [TargetRpc]
+    private void TargetRewardCurrency(NetworkConnection conn, string currencyId, int amount)
+    {
+        MonetizationManager.Save.AddCurrency(currencyId, amount);
     }
 }
