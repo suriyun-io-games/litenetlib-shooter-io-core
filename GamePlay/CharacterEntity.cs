@@ -152,9 +152,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected CharacterData characterData;
     protected HeadData headData;
     protected int defaultWeaponIndex = -1;
+    protected bool isMobileInput;
+    protected Vector2 inputMove;
+    protected Vector2 inputDirection;
+    protected bool inputAttack;
+    protected bool inputJump;
+
     public float startReloadTime { get; private set; }
     public float reloadDuration { get; private set; }
-
     public bool isReady { get; private set; }
     public bool isDead { get; private set; }
     public bool isGround { get; private set; }
@@ -429,17 +434,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (levelText != null)
             levelText.text = level.ToString("N0");
         UpdateAnimation();
-
-        // Update button inputs
-        if (isLocalPlayer && hp > 0)
-        {
-            if (InputManager.GetButtonDown("Reload"))
-                Reload();
-            if (GameplayManager.Singleton.autoReload &&
-                CurrentEquippedWeapon.currentAmmo == 0 &&
-                CurrentEquippedWeapon.CanReload())
-                Reload();
-        }
+        UpdateInput();
     }
 
     private void FixedUpdate()
@@ -479,6 +474,55 @@ public class CharacterEntity : BaseNetworkGameCharacter
             StartCoroutine(AttackRoutine(attackingActionId));
     }
 
+    protected virtual void UpdateInput()
+    {
+        if (!isLocalPlayer || Hp <= 0)
+            return;
+
+        bool canControl = true;
+        var fields = FindObjectsOfType<InputField>();
+        foreach (var field in fields)
+        {
+            if (field.isFocused)
+            {
+                canControl = false;
+                break;
+            }
+        }
+
+        isMobileInput = Application.isMobilePlatform;
+#if UNITY_EDITOR
+        isMobileInput = GameInstance.Singleton.showJoystickInEditor;
+#endif
+        InputManager.useMobileInputOnNonMobile = isMobileInput;
+
+        inputMove = Vector2.zero;
+        inputDirection = Vector2.zero;
+        inputAttack = false;
+        inputJump = false;
+        if (canControl)
+        {
+            inputMove = new Vector2(InputManager.GetAxis("Horizontal", false), InputManager.GetAxis("Vertical", false));
+            inputJump = InputManager.GetButtonDown("Jump");
+            if (isMobileInput)
+            {
+                inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
+                inputAttack = inputDirection.magnitude != 0;
+            }
+            else
+            {
+                inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
+                inputAttack = InputManager.GetButton("Fire1");
+            }
+            if (InputManager.GetButtonDown("Reload"))
+                Reload();
+            if (GameplayManager.Singleton.autoReload &&
+                CurrentEquippedWeapon.currentAmmo == 0 &&
+                CurrentEquippedWeapon.CanReload())
+                Reload();
+        }
+    }
+
     protected virtual float GetMoveSpeed()
     {
         return TotalMoveSpeed * GameplayManager.REAL_MOVE_SPEED_RATE;
@@ -503,41 +547,22 @@ public class CharacterEntity : BaseNetworkGameCharacter
             TempRigidbody.AddForce(velocityChange, ForceMode.VelocityChange);
         }
     }
-
+    
     protected virtual void UpdateMovements()
     {
         if (!isLocalPlayer || Hp <= 0)
             return;
 
-        var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
-        Move(direction);
-
-        bool showJoystick = Application.isMobilePlatform;
-#if UNITY_EDITOR
-        showJoystick = GameInstance.Singleton.showJoystickInEditor;
-#endif
-        InputManager.useMobileInputOnNonMobile = showJoystick;
-        if (showJoystick)
-        {
-            direction = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
-            Rotate(direction);
-            if (direction.magnitude != 0)
-                Attack();
-            else
-                StopAttack();
-        }
+        var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
+        Move(moveDirection);
+        Rotate(inputDirection);
+        if (inputAttack)
+            Attack();
         else
-        {
-            direction = (Input.mousePosition - targetCamera.WorldToScreenPoint(transform.position)).normalized;
-            Rotate(direction);
-            if (Input.GetMouseButton(0))
-                Attack();
-            else
-                StopAttack();
-        }
+            StopAttack();
 
         var velocity = TempRigidbody.velocity;
-        if (isGround && InputManager.GetButton("Jump"))
+        if (isGround && inputJump)
         {
             TempRigidbody.velocity = new Vector3(velocity.x, CalculateJumpVerticalSpeed(), velocity.z);
             isGround = false;
