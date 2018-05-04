@@ -3,6 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
+[System.Serializable]
+public struct DamageAttackData
+{
+    public NetworkInstanceId netId;
+    public float addRotationX;
+    public float addRotationY;
+    public static DamageAttackData Create(NetworkInstanceId attackerNetId, float addRotationX, float addRotationY)
+    {
+        var result = new DamageAttackData();
+        result.netId = attackerNetId;
+        result.addRotationX = addRotationX;
+        result.addRotationY = addRotationY;
+        return result;
+    }
+}
+
 [RequireComponent(typeof(Rigidbody))]
 public class DamageEntity : NetworkBehaviour
 {
@@ -20,12 +36,8 @@ public class DamageEntity : NetworkBehaviour
     /// We use this `attacketNetId` to let clients able to find `attacker` entity,
     /// This should be called only once when it spawn to reduce networking works
     /// </summary>
-    [HideInInspector, SyncVar(hook = "OnAttackerNetIdChanged")]
-    public NetworkInstanceId attackerNetId;
-    [SyncVar]
-    public float addRotationX = 0;
-    [SyncVar]
-    public float addRotationY = 0;
+    [HideInInspector, SyncVar(hook = "OnDamageData")]
+    public DamageAttackData damageAttacker;
     [HideInInspector]
     public int weaponDamage;
     private CharacterEntity attacker;
@@ -35,7 +47,7 @@ public class DamageEntity : NetworkBehaviour
         {
             if (!isServer && attacker == null)
             {
-                var go = ClientScene.FindLocalObject(attackerNetId);
+                var go = ClientScene.FindLocalObject(damageAttacker.netId);
                 if (go != null)
                     attacker = go.GetComponent<CharacterEntity>();
             }
@@ -73,7 +85,7 @@ public class DamageEntity : NetworkBehaviour
     public override void OnStartClient()
     {
         if (!isServer)
-            OnAttackerNetIdChanged(attackerNetId);
+            OnDamageData(damageAttacker);
     }
 
     public override void OnStartServer()
@@ -81,51 +93,35 @@ public class DamageEntity : NetworkBehaviour
         StartCoroutine(NetworkDestroy(lifeTime));
     }
 
-    private void OnAttackerNetIdChanged(NetworkInstanceId value)
+    private void OnDamageData(DamageAttackData value)
     {
-        attackerNetId = value;
-        InitAttacker(Attacker);
+        damageAttacker = value;
+        InitTransform();
     }
 
-    /// <summary>
-    /// This function will be called at client and server to set damage transform
-    /// </summary>
-    /// <param name="attacker"></param>
-    private void InitAttacker(CharacterEntity attacker)
+    private void InitTransform()
     {
         if (attacker == null)
             return;
-
         var damageLaunchTransform = attacker.damageLaunchTransform;
         if (relateToAttacker)
-        {
             TempTransform.SetParent(damageLaunchTransform);
-            var baseAngles = damageLaunchTransform.eulerAngles;
-            TempTransform.rotation = Quaternion.Euler(baseAngles.x, baseAngles.y + addRotationY, baseAngles.z);
-            TempTransform.position = damageLaunchTransform.position + TempTransform.forward * spawnForwardOffset;
-        }
+        var baseAngles = damageLaunchTransform.eulerAngles;
+        TempTransform.rotation = Quaternion.Euler(baseAngles.x + damageAttacker.addRotationX, baseAngles.y + damageAttacker.addRotationY, baseAngles.z);
+        TempTransform.position = damageLaunchTransform.position + TempTransform.forward * spawnForwardOffset;
     }
 
     /// <summary>
     /// Init Attacker, this function must be call at server to init attacker
     /// </summary>
-    /// <param name="addRotationY"></param>
     public void InitAttacker(CharacterEntity attacker, float addRotationX, float addRotationY)
     {
         if (attacker == null || !NetworkServer.active)
             return;
 
         this.attacker = attacker;
-        this.addRotationX = addRotationX;
-        this.addRotationY = addRotationY;
-
-        attackerNetId = attacker.netId;
-        InitAttacker(attacker);
-
-        var damageLaunchTransform = attacker.damageLaunchTransform;
-        var baseAngles = damageLaunchTransform.eulerAngles;
-        TempTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
-        TempTransform.position = damageLaunchTransform.position + TempTransform.forward * spawnForwardOffset;
+        damageAttacker = DamageAttackData.Create(attacker.netId, addRotationX, addRotationY);
+        InitTransform();
     }
 
     private void FixedUpdate()
@@ -141,7 +137,7 @@ public class DamageEntity : NetworkBehaviour
             if (relateToAttacker)
             {
                 var baseAngles = attacker.damageLaunchTransform.eulerAngles;
-                TempTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
+                TempTransform.rotation = Quaternion.Euler(baseAngles.x + damageAttacker.addRotationX, baseAngles.y + damageAttacker.addRotationY, baseAngles.z);
                 TempRigidbody.velocity = attacker.TempRigidbody.velocity + GetForwardVelocity();
             }
             else
@@ -173,7 +169,7 @@ public class DamageEntity : NetworkBehaviour
 
         var otherCharacter = other.GetComponent<CharacterEntity>();
         // Damage will not hit attacker, so avoid it
-        if (otherCharacter != null && otherCharacter.netId.Value == attackerNetId.Value)
+        if (otherCharacter != null && otherCharacter.netId.Value == damageAttacker.netId.Value)
             return;
 
         var hitSomeAliveCharacter = false;
@@ -188,7 +184,7 @@ public class DamageEntity : NetworkBehaviour
         {
             var target = colliders[i].GetComponent<CharacterEntity>();
             // If not character or character is attacker, skip it.
-            if (target == null || target == otherCharacter || target.netId.Value == attackerNetId.Value || target.Hp <= 0)
+            if (target == null || target == otherCharacter || target.netId.Value == damageAttacker.netId.Value || target.Hp <= 0)
                 continue;
 
             hitSomeAliveCharacter = true;

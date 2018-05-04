@@ -50,7 +50,7 @@ public class WeaponData : ItemData
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
-            damageEntity.InitAttacker(attacker, Random.Range(-staggerX, staggerX), Random.Range(-staggerY, staggerY));
+            damageEntity.InitAttacker(attacker, Random.Range(-staggerY, staggerY), Random.Range(-staggerX, staggerX));
             damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
             NetworkServer.Spawn(damageEntity.gameObject);
         }
