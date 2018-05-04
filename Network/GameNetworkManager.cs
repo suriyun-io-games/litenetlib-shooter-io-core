@@ -68,7 +68,16 @@ public class GameNetworkManager : BaseNetworkGameManager
     protected override BaseNetworkGameCharacter NewCharacter(NetworkReader extraMessageReader)
     {
         var joinMessage = extraMessageReader.ReadMessage<JoinMessage>();
-        var character = Instantiate(GameInstance.Singleton.characterPrefab);
+        // Get character prefab
+        CharacterEntity characterPrefab = GameInstance.Singleton.characterPrefab;
+        if (gameRule != null && gameRule is IONetworkGameRule)
+        {
+            var ioGameRule = gameRule as IONetworkGameRule;
+            if (ioGameRule.overrideCharacterPrefab != null)
+                characterPrefab = ioGameRule.overrideCharacterPrefab;
+        }
+        var character = Instantiate(characterPrefab);
+        // Set character data
         character.Hp = character.TotalHp;
         character.playerName = joinMessage.playerName;
         character.selectHead = joinMessage.selectHead;
