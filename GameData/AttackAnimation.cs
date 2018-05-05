@@ -8,4 +8,5 @@ public class AttackAnimation
     public float animationDuration;
     public float launchDuration;
     public float speed = 1f;
+    public bool isAnimationForLeftHandWeapon;
 }

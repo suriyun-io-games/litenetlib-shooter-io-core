@@ -36,23 +36,32 @@ public class WeaponData : ItemData
     public AudioClip emptyFx;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
-    public void Launch(CharacterEntity attacker)
+    public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)
     {
-        if (attacker == null)
+        if (attacker == null || !NetworkServer.active)
             return;
         
         for (int i = 0; i < spread; ++i)
         {
-            var damageLaunchTransform = attacker.damageLaunchTransform;
-            var damageEntity = Instantiate(damagePrefab,
-                    damageLaunchTransform.position,
-                    damageLaunchTransform.rotation);
+            Transform launchTransform;
+            attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
-            damageEntity.InitAttacker(attacker, Random.Range(-staggerY, staggerY), Random.Range(-staggerX, staggerX));
+            var addRotationX = Random.Range(-staggerY, staggerY);
+            var addRotationY = Random.Range(-staggerX, staggerX);
+            var position = launchTransform.position;
+            var direction = attacker.TempTransform.forward;
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
-            NetworkServer.Spawn(damageEntity.gameObject);
+            var msg = new OpMsgCharacterAttack();
+            msg.weaponId = GetId();
+            msg.position = position;
+            msg.direction = direction;
+            msg.attackerNetId = attacker.netId;
+            msg.addRotationX = addRotationX;
+            msg.addRotationY = addRotationY;
+            NetworkServer.SendToAll(msg.OpId, msg);
         }
 
         attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);

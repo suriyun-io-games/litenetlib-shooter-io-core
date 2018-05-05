@@ -59,9 +59,6 @@ public class GameInstance : BaseNetworkGameInstance
         {
             weapon.SetupAnimations();
             Weapons.Add(weapon.GetId(), weapon);
-            var damagePrefab = weapon.damagePrefab;
-            if (damagePrefab != null && !ClientScene.prefabs.ContainsValue(damagePrefab.gameObject))
-                ClientScene.RegisterPrefab(damagePrefab.gameObject);
         }
 
         UpdateAvailableItems();

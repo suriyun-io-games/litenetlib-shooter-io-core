@@ -590,6 +590,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
             TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, targetRotation, Time.deltaTime * 5f);
         }
     }
+    
+    public void GetDamageLaunchTransform(bool isLeftHandWeapon, out Transform launchTransform)
+    {
+        launchTransform = null;
+        if (characterModel == null || !characterModel.TryGetDamageLaunchTransform(isLeftHandWeapon, out launchTransform))
+            launchTransform = damageLaunchTransform;
+    }
 
     protected void Attack()
     {
@@ -652,7 +659,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 // Launch damage entity on server only
                 if (isServer)
                 {
-                    WeaponData.Launch(this);
+                    WeaponData.Launch(this, attackAnimation.isAnimationForLeftHandWeapon);
                     var equippedWeapon = CurrentEquippedWeapon;
                     equippedWeapon.DecreaseAmmo();
                     equippedWeapons[selectWeaponIndex] = equippedWeapon;

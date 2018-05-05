@@ -3,24 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
-[System.Serializable]
-public struct DamageAttackData
-{
-    public NetworkInstanceId netId;
-    public float addRotationX;
-    public float addRotationY;
-    public static DamageAttackData Create(NetworkInstanceId attackerNetId, float addRotationX, float addRotationY)
-    {
-        var result = new DamageAttackData();
-        result.netId = attackerNetId;
-        result.addRotationX = addRotationX;
-        result.addRotationY = addRotationY;
-        return result;
-    }
-}
-
 [RequireComponent(typeof(Rigidbody))]
-public class DamageEntity : NetworkBehaviour
+public class DamageEntity : MonoBehaviour
 {
     public EffectEntity spawnEffectPrefab;
     public EffectEntity explodeEffectPrefab;
@@ -32,29 +16,27 @@ public class DamageEntity : NetworkBehaviour
     public float speed;
     public bool relateToAttacker;
     private bool isDead;
-    /// <summary>
-    /// We use this `attacketNetId` to let clients able to find `attacker` entity,
-    /// This should be called only once when it spawn to reduce networking works
-    /// </summary>
-    [HideInInspector, SyncVar(hook = "OnDamageData")]
-    public DamageAttackData damageAttacker;
+    private bool isLeftHandWeapon;
+    private NetworkInstanceId attackerNetId;
+    private float addRotationX;
+    private float addRotationY;
     [HideInInspector]
     public int weaponDamage;
+
     private CharacterEntity attacker;
     public CharacterEntity Attacker
     {
         get
         {
-            if (!isServer && attacker == null)
+            if (attacker == null)
             {
-                var go = ClientScene.FindLocalObject(damageAttacker.netId);
+                var go = ClientScene.FindLocalObject(attackerNetId);
                 if (go != null)
                     attacker = go.GetComponent<CharacterEntity>();
             }
             return attacker;
         }
     }
-
     private Transform tempTransform;
     public Transform TempTransform
     {
@@ -82,46 +64,36 @@ public class DamageEntity : NetworkBehaviour
         collider.isTrigger = true;
     }
 
-    public override void OnStartClient()
+    private void Start()
     {
-        if (!isServer)
-            OnDamageData(damageAttacker);
-    }
-
-    public override void OnStartServer()
-    {
-        StartCoroutine(NetworkDestroy(lifeTime));
-    }
-
-    private void OnDamageData(DamageAttackData value)
-    {
-        damageAttacker = value;
-        InitTransform();
-    }
-
-    private void InitTransform()
-    {
-        if (attacker == null)
-            return;
-        var damageLaunchTransform = attacker.damageLaunchTransform;
-        if (relateToAttacker)
-            TempTransform.SetParent(damageLaunchTransform);
-        var baseAngles = damageLaunchTransform.eulerAngles;
-        TempTransform.rotation = Quaternion.Euler(baseAngles.x + damageAttacker.addRotationX, baseAngles.y + damageAttacker.addRotationY, baseAngles.z);
-        TempTransform.position = damageLaunchTransform.position + TempTransform.forward * spawnForwardOffset;
+        Destroy(gameObject, lifeTime);
     }
 
     /// <summary>
     /// Init Attacker, this function must be call at server to init attacker
     /// </summary>
-    public void InitAttacker(CharacterEntity attacker, float addRotationX, float addRotationY)
+    public void InitAttackData(bool isLeftHandWeapon, NetworkInstanceId attackerNetId, float addRotationX, float addRotationY)
     {
-        if (attacker == null || !NetworkServer.active)
+        this.isLeftHandWeapon = isLeftHandWeapon;
+        this.attackerNetId = attackerNetId;
+        this.addRotationX = addRotationX;
+        this.addRotationY = addRotationY;
+        InitTransform();
+    }
+
+    private void InitTransform()
+    {
+        if (Attacker == null)
             return;
 
-        this.attacker = attacker;
-        damageAttacker = DamageAttackData.Create(attacker.netId, addRotationX, addRotationY);
-        InitTransform();
+        if (relateToAttacker)
+        {
+            Transform damageLaunchTransform;
+            Attacker.GetDamageLaunchTransform(isLeftHandWeapon, out damageLaunchTransform);
+            TempTransform.SetParent(damageLaunchTransform);
+            var baseAngles = attacker.TempTransform.eulerAngles;
+            TempTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
+        }
     }
 
     private void FixedUpdate()
@@ -131,14 +103,19 @@ public class DamageEntity : NetworkBehaviour
 
     private void UpdateMovement()
     {
-        var attacker = Attacker;
-        if (attacker != null)
+        if (Attacker != null)
         {
             if (relateToAttacker)
             {
-                var baseAngles = attacker.damageLaunchTransform.eulerAngles;
-                TempTransform.rotation = Quaternion.Euler(baseAngles.x + damageAttacker.addRotationX, baseAngles.y + damageAttacker.addRotationY, baseAngles.z);
-                TempRigidbody.velocity = attacker.TempRigidbody.velocity + GetForwardVelocity();
+                if (TempTransform.parent == null)
+                {
+                    Transform damageLaunchTransform;
+                    Attacker.GetDamageLaunchTransform(isLeftHandWeapon, out damageLaunchTransform);
+                    TempTransform.SetParent(damageLaunchTransform);
+                }
+                var baseAngles = attacker.TempTransform.eulerAngles;
+                TempTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
+                TempRigidbody.velocity = Attacker.TempRigidbody.velocity + GetForwardVelocity();
             }
             else
                 TempRigidbody.velocity = GetForwardVelocity();
@@ -147,19 +124,10 @@ public class DamageEntity : NetworkBehaviour
             TempRigidbody.velocity = GetForwardVelocity();
     }
 
-    IEnumerator NetworkDestroy(float time)
-    {
-        if (time < 0)
-            time = 0;
-        yield return new WaitForSecondsRealtime(time);
-        NetworkServer.Destroy(gameObject);
-    }
-
-    public override void OnNetworkDestroy()
+    private void OnDestroy()
     {
         if (!isDead)
             EffectEntity.PlayEffect(explodeEffectPrefab, TempTransform);
-        base.OnNetworkDestroy();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -169,7 +137,7 @@ public class DamageEntity : NetworkBehaviour
 
         var otherCharacter = other.GetComponent<CharacterEntity>();
         // Damage will not hit attacker, so avoid it
-        if (otherCharacter != null && otherCharacter.netId.Value == damageAttacker.netId.Value)
+        if (otherCharacter != null && otherCharacter.netId.Value == attackerNetId.Value)
             return;
 
         var hitSomeAliveCharacter = false;
@@ -184,7 +152,7 @@ public class DamageEntity : NetworkBehaviour
         {
             var target = colliders[i].GetComponent<CharacterEntity>();
             // If not character or character is attacker, skip it.
-            if (target == null || target == otherCharacter || target.netId.Value == damageAttacker.netId.Value || target.Hp <= 0)
+            if (target == null || target == otherCharacter || target.netId.Value == attackerNetId.Value || target.Hp <= 0)
                 continue;
 
             hitSomeAliveCharacter = true;
@@ -202,7 +170,7 @@ public class DamageEntity : NetworkBehaviour
         }
 
         // Destroy this on all clients
-        if (isServer)
+        if (NetworkServer.active)
         {
             NetworkServer.Destroy(gameObject);
             isDead = true;
@@ -222,7 +190,7 @@ public class DamageEntity : NetworkBehaviour
     private void ApplyDamage(CharacterEntity target)
     {
         // Damage receiving calculation on server only
-        if (isServer)
+        if (NetworkServer.active)
         {
             var gameplayManager = GameplayManager.Singleton;
             float damage = weaponDamage * Attacker.TotalWeaponDamageRate;
@@ -240,5 +208,55 @@ public class DamageEntity : NetworkBehaviour
     public Vector3 GetForwardVelocity()
     {
         return TempTransform.forward * speed * GameplayManager.REAL_MOVE_SPEED_RATE;
+    }
+
+    public static DamageEntity InstantiateNewEntity(OpMsgCharacterAttack msg)
+    {
+        return InstantiateNewEntity(msg.weaponId, msg.isLeftHandWeapon, msg.position, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+    }
+
+    public static DamageEntity InstantiateNewEntity(
+        string weaponId,
+        bool isLeftHandWeapon,
+        Vector3 position,
+        Vector3 direction,
+        NetworkInstanceId attackerNetId,
+        float addRotationX,
+        float addRotationY)
+    {
+        WeaponData weaponData = null;
+        if (GameInstance.Weapons.TryGetValue(weaponId, out weaponData))
+            return InstantiateNewEntity(weaponData.damagePrefab, isLeftHandWeapon, position, direction, attackerNetId, addRotationX, addRotationY);
+        return null;
+    }
+
+    public static DamageEntity InstantiateNewEntity(
+        DamageEntity prefab,
+        bool isLeftHandWeapon,
+        Vector3 position,
+        Vector3 direction,
+        NetworkInstanceId attackerNetId,
+        float addRotationX,
+        float addRotationY)
+    {
+        if (prefab == null)
+            return null;
+
+        CharacterEntity attacker = null;
+        var go = ClientScene.FindLocalObject(attackerNetId);
+        if (go != null)
+            attacker = go.GetComponent<CharacterEntity>();
+
+        if (attacker != null)
+        {
+            Transform launchTransform;
+            attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
+            position = launchTransform.position + attacker.TempTransform.forward * prefab.spawnForwardOffset;
+        }
+        var rotation = Quaternion.LookRotation(direction, Vector3.up);
+        rotation = Quaternion.Euler(rotation.eulerAngles + new Vector3(addRotationX, addRotationY));
+        var result = Instantiate(prefab, position, rotation);
+        result.InitAttackData(isLeftHandWeapon, attackerNetId, addRotationX, addRotationY);
+        return result;
     }
 }

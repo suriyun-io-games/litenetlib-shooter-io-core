@@ -65,6 +65,20 @@ public class GameNetworkManager : BaseNetworkGameManager
             ClientScene.AddPlayer(conn, 0, MakeJoinMessage());
     }
 
+    public override void OnStartClient(NetworkClient client)
+    {
+        base.OnStartClient(client);
+        client.RegisterHandler(new OpMsgCharacterAttack().OpId, ReadMsgCharacterAttack);
+    }
+
+    protected void ReadMsgCharacterAttack(NetworkMessage netMsg)
+    {
+        var msg = netMsg.ReadMessage<OpMsgCharacterAttack>();
+        // Instantiates damage entities on clients only
+        if (!NetworkServer.active)
+            DamageEntity.InstantiateNewEntity(msg);
+    }
+
     protected override BaseNetworkGameCharacter NewCharacter(NetworkReader extraMessageReader)
     {
         var joinMessage = extraMessageReader.ReadMessage<JoinMessage>();
