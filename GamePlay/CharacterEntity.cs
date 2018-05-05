@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(Rigidbody))]
 public class CharacterEntity : BaseNetworkGameCharacter
@@ -496,6 +497,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 #endif
         InputManager.useMobileInputOnNonMobile = isMobileInput;
 
+        var canAttack = Application.isMobilePlatform || !EventSystem.current.IsPointerOverGameObject();
         inputMove = Vector2.zero;
         inputDirection = Vector2.zero;
         inputAttack = false;
@@ -507,12 +509,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
             if (isMobileInput)
             {
                 inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
-                inputAttack = inputDirection.magnitude != 0;
+                if (canAttack)
+                    inputAttack = inputDirection.magnitude != 0;
             }
             else
             {
                 inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
-                inputAttack = InputManager.GetButton("Fire1");
+                if (canAttack)
+                    inputAttack = InputManager.GetButton("Fire1");
             }
             if (InputManager.GetButtonDown("Reload"))
                 Reload();
