@@ -10,6 +10,7 @@ public struct BRCircle
     public Transform circleCenter;
     public float shrinkDelay;
     public float shrinkDuration;
+    [Range(0.01f, 1f)]
     public float hpRateDps;
 }
 
@@ -27,9 +28,8 @@ public enum BRState : byte
     LastCircle,
 }
 
-public class BRGameplayManager : NetworkBehaviour
+public class BRGameplayManager : GameplayManager
 {
-    public static BRGameplayManager Singleton { get; private set; }
     public float waitForPlayersDuration;
     public BRPattern[] patterns;
     public GameObject circleObject;
@@ -52,11 +52,6 @@ public class BRGameplayManager : NetworkBehaviour
     private BRPattern randomedPattern;
     private bool serverStarted;
 
-    private void Awake()
-    {
-        Singleton = this;
-    }
-
     public override void OnStartServer()
     {
         serverStarted = true;
@@ -74,7 +69,7 @@ public class BRGameplayManager : NetworkBehaviour
         if (circleObject != null)
         {
             circleObject.SetActive(currentState != BRState.WaitingForPlayers);
-            circleObject.transform.localScale = Vector3.one * circleRadiusScale * currentRadius;
+            circleObject.transform.localScale = Vector3.one * circleRadiusScale * currentRadius * 2f;
             circleObject.transform.position = currentCenterPosition;
         }
     }
@@ -98,6 +93,8 @@ public class BRGameplayManager : NetworkBehaviour
                         currentState = BRState.ShrinkDelaying;
                         timeCountdown = circle.shrinkDelay;
                         currentCircleHpRateDps = circle.hpRateDps;
+                        startShrinkRadius = currentRadius = circle.radius;
+                        startShrinkCenterPosition = currentCenterPosition = circle.circleCenter.position;
                     }
                     else
                     {

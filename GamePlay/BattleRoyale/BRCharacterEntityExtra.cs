@@ -28,23 +28,26 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         }
     }
 
+    private float lastCircleCheckTime;
+
     private void Update()
     {
         if (isServer)
         {
-            var brGameManager = BRGameplayManager.Singleton;
-            if (brGameManager.currentState != BRState.WaitingForPlayers)
+            var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+            if (brGameManager.currentState != BRState.WaitingForPlayers && Time.realtimeSinceStartup - lastCircleCheckTime >= 1f)
             {
                 var currentPosition = TempTransform.position;
                 currentPosition.y = 0;
 
                 var centerPosition = brGameManager.currentCenterPosition;
                 centerPosition.y = 0;
-
-                if (Vector3.Distance(currentPosition, centerPosition) > brGameManager.currentRadius)
-                {
-                    TempCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.currentCircleHpRateDps * TempCharacterEntity.Hp);
-                }
+                var distance = Vector3.Distance(currentPosition, centerPosition);
+                var currentRadius = brGameManager.currentRadius;
+                Debug.LogError(brGameManager.currentCircleHpRateDps);
+                if (distance > currentRadius)
+                    TempCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.currentCircleHpRateDps * TempCharacterEntity.TotalHp);
+                lastCircleCheckTime = Time.realtimeSinceStartup;
             }
         }
     }
