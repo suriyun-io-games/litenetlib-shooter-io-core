@@ -71,7 +71,8 @@ public class PickupEntity : NetworkBehaviour
                 {
                     isDead = true;
                     NetworkServer.Destroy(gameObject);
-                    gameplayManager.SpawnPickup(prefabName);
+                    if (gameplayManager.respawnPickedupItems)
+                        gameplayManager.SpawnPickup(prefabName);
                 }
             }
 

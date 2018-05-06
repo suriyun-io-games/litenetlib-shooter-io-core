@@ -39,6 +39,7 @@ public class GameplayManager : NetworkBehaviour
     public float invincibleDuration = 1.5f;
     public bool autoReload = true;
     public bool autoPickup = false;
+    public bool respawnPickedupItems = true;
     public SpawnArea[] characterSpawnAreas;
     public SpawnArea[] powerUpSpawnAreas;
     public SpawnArea[] pickupSpawnAreas;
@@ -48,7 +49,7 @@ public class GameplayManager : NetworkBehaviour
     public readonly Dictionary<string, PickupEntity> pickupEntities = new Dictionary<string, PickupEntity>();
     public readonly Dictionary<string, CharacterAttributes> attributes = new Dictionary<string, CharacterAttributes>();
 
-    private void Awake()
+    protected virtual void Awake()
     {
         if (Singleton != null)
         {
