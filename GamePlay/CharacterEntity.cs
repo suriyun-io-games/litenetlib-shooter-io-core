@@ -142,7 +142,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get { return hp <= 0; }
     }
-
+    
+    public System.Action onDead;
     public readonly Dictionary<uint, PickupEntity> PickableEntities = new Dictionary<uint, PickupEntity>();
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
 
@@ -591,7 +592,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             int newRotation = (int)(Quaternion.LookRotation(new Vector3(direction.x, 0, direction.y)).eulerAngles.y + targetCamera.transform.eulerAngles.y);
             Quaternion targetRotation = Quaternion.Euler(0, newRotation, 0);
-            TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, targetRotation, Time.deltaTime * 5f);
+            TempTransform.rotation = targetRotation;
         }
     }
     
@@ -734,7 +735,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ReceiveDamage(CharacterEntity attacker, int damage)
     {
-        if (Hp <= 0 || isInvincible)
+        var gameplayManager = GameplayManager.Singleton;
+        if (Hp <= 0 || isInvincible || !gameplayManager.CanReceiveDamage(this))
             return;
 
         RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
@@ -769,11 +771,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
             attacker.Hp += leechHpAmount;
             if (Hp == 0)
             {
+                if (onDead != null)
+                    onDead.Invoke();
                 InterruptAttack();
                 InterruptReload();
                 RpcInterruptAttack();
                 RpcInterruptReload();
                 attacker.KilledTarget(this);
+                ++dieCount;
             }
         }
     }
@@ -930,8 +935,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerRespawn(bool isWatchedAds)
     {
-        var gameplayManager = GameplayManager.Singleton;
-        if (Time.unscaledTime - deathTime >= gameplayManager.respawnDuration)
+        if (CanRespawn(isWatchedAds))
             ServerSpawn(isWatchedAds);
     }
 
