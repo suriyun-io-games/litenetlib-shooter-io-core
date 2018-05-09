@@ -1,19 +1,96 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class BattleRoyaleNetworkGameRule : IONetworkGameRule
 {
-    public override void OnUpdateCharacter(BaseNetworkGameCharacter character)
-    {
-        base.OnUpdateCharacter(character);
-        var gameCharacter = character as CharacterEntity;
-        if (gameCharacter.Hp <= 0)
-        {
-            IsMatchEnded = true;
-            EndMatch();
+    public bool fillBots;
+    public int endMatchCountDown = 10;
+    public int EndMatchCountingDown { get; protected set; }
+    public override bool HasOptionBotCount { get { return false; } }
+    public override bool HasOptionMatchTime { get { return false; } }
+    public override bool HasOptionMatchKill { get { return false; } }
+    public override bool HasOptionMatchScore { get { return false; } }
+    public override bool ShowZeroScoreWhenDead { get { return false; } }
+    public override bool ShowZeroKillCountWhenDead { get { return false; } }
+    public override bool ShowZeroAssistCountWhenDead { get { return false; } }
+    public override bool ShowZeroDieCountWhenDead { get { return false; } }
 
-            // Show ranking
+    protected override void EndMatch()
+    {
+        networkManager.StartCoroutine(EndMatchRoutine());
+    }
+
+    IEnumerator EndMatchRoutine()
+    {
+        EndMatchCountingDown = endMatchCountDown;
+        while (EndMatchCountingDown > 0)
+        {
+            yield return new WaitForSeconds(1);
+            --EndMatchCountingDown;
+        }
+        networkManager.StopHost();
+    }
+
+    public override bool RespawnCharacter(BaseNetworkGameCharacter character, params object[] extraParams)
+    {
+        var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
+        // Can spawn player when the game is waiting for players state only
+        if (brGameplayManager != null && brGameplayManager.currentState == BRState.WaitingForPlayers)
+            return true;
+        return false;
+    }
+
+    public override void OnUpdate()
+    {
+        var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameplayManager != null && brGameplayManager.currentState == BRState.WaitingForPlayers)
+            return;
+        var networkGameManager = BaseNetworkGameManager.Singleton;
+        if (networkGameManager.CountAliveCharacters() <= 1 && !IsMatchEnded)
+        {
+            var hasUnspawnedCharacter = false;
+            var characters = networkGameManager.Characters;
+            foreach (var character in characters)
+            {
+                if (character == null)
+                    continue;
+                var extra = character.GetComponent<BRCharacterEntityExtra>();
+                if (extra != null)
+                {
+                    if (!extra.isSpawned)
+                    {
+                        hasUnspawnedCharacter = true;
+                        continue;
+                    }
+                    if (!character.IsDead)
+                        extra.RpcRankResult(1);
+                }
+            }
+            // If some characters are not spawned, won't end match
+            if (!hasUnspawnedCharacter)
+            {
+                IsMatchEnded = true;
+                EndMatch();
+            }
+        }
+    }
+
+    public override void AddBots()
+    {
+        if (!fillBots)
+            return;
+
+        var botCount = networkManager.maxConnections - networkManager.Characters.Count;
+        for (var i = 0; i < botCount; ++i)
+        {
+            var character = NewBot();
+            if (character == null)
+                continue;
+            
+            NetworkServer.Spawn(character.gameObject);
+            networkManager.RegisterCharacter(character);
         }
     }
 }

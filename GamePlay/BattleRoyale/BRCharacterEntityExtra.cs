@@ -6,6 +6,9 @@ using UnityEngine.Networking;
 [RequireComponent(typeof(CharacterEntity))]
 public class BRCharacterEntityExtra : NetworkBehaviour
 {
+    [SyncVar]
+    public bool isSpawned;
+
     private Transform tempTransform;
     public Transform TempTransform
     {
@@ -27,14 +30,52 @@ public class BRCharacterEntityExtra : NetworkBehaviour
             return tempCharacterEntity;
         }
     }
-
+    private float botRandomSpawn;
+    private bool botSpawnCalled;
+    private bool botDeadRemoveCalled;
     private float lastCircleCheckTime;
+    private bool disableRenderers;
+
+    private void Awake()
+    {
+        TempCharacterEntity.enabled = false;
+        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        var maxRandomDist = 30f;
+        if (brGameManager != null)
+        {
+            if (brGameManager.currentState != BRState.WaitingForPlayers)
+            {
+                NetworkServer.Destroy(TempCharacterEntity.gameObject);
+                return;
+            }
+            maxRandomDist = brGameManager.spawnerMoveDuration * 0.25f;
+        }
+        botRandomSpawn = Random.Range(0f, maxRandomDist);
+    }
+
+    public override void OnStartLocalPlayer()
+    {
+        base.OnStartLocalPlayer();
+        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameManager != null && brGameManager.currentState != BRState.WaitingForPlayers)
+            GameNetworkManager.Singleton.StopHost();
+    }
+
+    private void Start()
+    {
+        TempCharacterEntity.onDead += OnDead;
+    }
+
+    private void OnDestroy()
+    {
+        TempCharacterEntity.onDead -= OnDead;
+    }
 
     private void Update()
     {
+        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
         if (isServer)
         {
-            var brGameManager = GameplayManager.Singleton as BRGameplayManager;
             if (brGameManager.currentState != BRState.WaitingForPlayers && Time.realtimeSinceStartup - lastCircleCheckTime >= 1f)
             {
                 var currentPosition = TempTransform.position;
@@ -44,11 +85,130 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 centerPosition.y = 0;
                 var distance = Vector3.Distance(currentPosition, centerPosition);
                 var currentRadius = brGameManager.currentRadius;
-                Debug.LogError(brGameManager.currentCircleHpRateDps);
                 if (distance > currentRadius)
-                    TempCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.currentCircleHpRateDps * TempCharacterEntity.TotalHp);
+                    TempCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.CurrentCircleHpRateDps * TempCharacterEntity.TotalHp);
                 lastCircleCheckTime = Time.realtimeSinceStartup;
             }
         }
+        if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
+        {
+            if (isServer && !botSpawnCalled && TempCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(TempCharacterEntity))
+            {
+                botSpawnCalled = true;
+                StartCoroutine(BotSpawnRoutine());
+            }
+            if (TempCharacterEntity.TempRigidbody.useGravity)
+                TempCharacterEntity.TempRigidbody.useGravity = false;
+            if (TempCharacterEntity.enabled)
+                TempCharacterEntity.enabled = false;
+            if (isServer || isLocalPlayer)
+            {
+                TempTransform.position = brGameManager.GetSpawnerPosition();
+                TempTransform.rotation = brGameManager.GetSpawnerRotation();
+            }
+            if (!disableRenderers)
+            {
+                var renderers = GetComponentsInChildren<Renderer>();
+                foreach (var renderer in renderers)
+                {
+                    renderer.enabled = false;
+                }
+                var canvases = GetComponentsInChildren<Canvas>();
+                foreach (var canvas in canvases)
+                {
+                    canvas.enabled = false;
+                }
+                disableRenderers = true;
+            }
+        }
+        else if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
+        {
+            if (isServer && !botDeadRemoveCalled && TempCharacterEntity is BotEntity && TempCharacterEntity.IsDead)
+            {
+                botDeadRemoveCalled = true;
+                StartCoroutine(BotDeadRemoveRoutine());
+            }
+            if (!TempCharacterEntity.TempRigidbody.useGravity)
+                TempCharacterEntity.TempRigidbody.useGravity = true;
+            if (!TempCharacterEntity.enabled)
+                TempCharacterEntity.enabled = true;
+            if (disableRenderers)
+            {
+                var renderers = GetComponentsInChildren<Renderer>();
+                foreach (var renderer in renderers)
+                {
+                    renderer.enabled = true;
+                }
+                var canvases = GetComponentsInChildren<Canvas>();
+                foreach (var canvas in canvases)
+                {
+                    canvas.enabled = true;
+                }
+                disableRenderers = false;
+            }
+        }
+    }
+
+    IEnumerator BotSpawnRoutine()
+    {
+        yield return new WaitForSeconds(botRandomSpawn);
+        ServerCharacterSpawn();
+    }
+
+    IEnumerator BotDeadRemoveRoutine()
+    {
+        yield return new WaitForSeconds(5f);
+        NetworkServer.Destroy(gameObject);
+    }
+
+    private void OnDead()
+    {
+        if (!isServer)
+            return;
+        var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameplayManager != null)
+            RpcRankResult(BaseNetworkGameManager.Singleton.CountAliveCharacters() + 1);
+    }
+
+    IEnumerator ShowRankResultRoutine(int rank)
+    {
+        yield return new WaitForSeconds(3f);
+        var ui = UIBRGameplay.Singleton;
+        if (ui != null)
+            ui.ShowRankResult(rank);
+    }
+
+    [Server]
+    public void ServerCharacterSpawn()
+    {
+        var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
+        if (!isSpawned && brGameplayManager != null)
+        {
+            isSpawned = true;
+            RpcCharacterSpawned(brGameplayManager.SpawnCharacter(TempCharacterEntity) + new Vector3(Random.Range(-2.5f, 2.5f), 0, Random.Range(-2.5f, 2.5f)));
+        }
+    }
+
+    [Command]
+    public void CmdCharacterSpawn()
+    {
+        var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
+        if (!isSpawned && brGameplayManager != null && brGameplayManager.CanSpawnCharacter(TempCharacterEntity))
+            ServerCharacterSpawn();
+    }
+
+    [ClientRpc]
+    public void RpcCharacterSpawned(Vector3 spawnPosition)
+    {
+        TempCharacterEntity.TempTransform.position = spawnPosition;
+        TempCharacterEntity.TempRigidbody.useGravity = true;
+        TempCharacterEntity.TempRigidbody.isKinematic = false;
+    }
+
+    [ClientRpc]
+    public void RpcRankResult(int rank)
+    {
+        if (isLocalPlayer)
+            StartCoroutine(ShowRankResultRoutine(rank));
     }
 }
