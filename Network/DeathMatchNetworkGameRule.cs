@@ -6,10 +6,14 @@ public class DeathMatchNetworkGameRule : IONetworkGameRule
 {
     public int endMatchCountDown = 10;
     public int EndMatchCountingDown { get; protected set; }
-
+    public override bool HasOptionBotCount { get { return true; } }
     public override bool HasOptionMatchTime { get { return true; } }
-
     public override bool HasOptionMatchKill { get { return true; } }
+    public override bool HasOptionMatchScore { get { return false; } }
+    public override bool ShowZeroScoreWhenDead { get { return false; } }
+    public override bool ShowZeroKillCountWhenDead { get { return false; } }
+    public override bool ShowZeroAssistCountWhenDead { get { return false; } }
+    public override bool ShowZeroDieCountWhenDead { get { return false; } }
 
     protected override void EndMatch()
     {

@@ -8,12 +8,13 @@ public class IONetworkGameRule : BaseNetworkGameRule
     public BotEntity overrideBotPrefab;
 
     public override bool HasOptionBotCount { get { return true; } }
-
     public override bool HasOptionMatchTime { get { return false; } }
-
     public override bool HasOptionMatchKill { get { return false; } }
-
     public override bool HasOptionMatchScore { get { return false; } }
+    public override bool ShowZeroScoreWhenDead { get { return true; } }
+    public override bool ShowZeroKillCountWhenDead { get { return true; } }
+    public override bool ShowZeroAssistCountWhenDead { get { return true; } }
+    public override bool ShowZeroDieCountWhenDead { get { return true; } }
 
     protected override BaseNetworkGameCharacter NewBot()
     {
@@ -41,7 +42,7 @@ public class IONetworkGameRule : BaseNetworkGameRule
     {
         var gameplayManager = GameplayManager.Singleton;
         var targetCharacter = character as CharacterEntity;
-        return Time.unscaledTime - targetCharacter.deathTime >= gameplayManager.respawnDuration;
+        return gameplayManager.CanRespawn(targetCharacter) && Time.unscaledTime - targetCharacter.deathTime >= gameplayManager.respawnDuration;
     }
 
     public override bool RespawnCharacter(BaseNetworkGameCharacter character, params object[] extraParams)
@@ -55,12 +56,12 @@ public class IONetworkGameRule : BaseNetworkGameRule
         // For IO Modes, character stats will be reset when dead
         if (!isWatchedAds || targetCharacter.watchAdsCount >= gameplayManager.watchAdsRespawnAvailable)
         {
-            targetCharacter.score = 0;
+            targetCharacter.ResetScore();
+            targetCharacter.ResetKillCount();
+            targetCharacter.ResetAssistCount();
             targetCharacter.Exp = 0;
             targetCharacter.level = 1;
             targetCharacter.statPoint = 0;
-            targetCharacter.killCount = 0;
-            targetCharacter.assistCount = 0;
             targetCharacter.watchAdsCount = 0;
             targetCharacter.addStats = new CharacterStats();
             targetCharacter.Armor = 0;

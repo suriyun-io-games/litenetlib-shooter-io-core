@@ -171,4 +171,20 @@ public class GameplayManager : NetworkBehaviour
     {
         return killScore.Calculate(currentLevel, maxLevel);
     }
+
+    public virtual bool CanRespawn(CharacterEntity character)
+    {
+        var networkGameplayManager = BaseNetworkGameManager.Singleton;
+        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
+            return false;
+        return true;
+    }
+
+    public virtual bool CanReceiveDamage(CharacterEntity character)
+    {
+        var networkGameplayManager = BaseNetworkGameManager.Singleton;
+        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
+            return false;
+        return true;
+    }
 }
