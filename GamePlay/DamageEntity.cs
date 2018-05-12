@@ -30,7 +30,7 @@ public class DamageEntity : MonoBehaviour
         {
             if (attacker == null)
             {
-                var go = ClientScene.FindLocalObject(attackerNetId);
+                var go = NetworkServer.active ? NetworkServer.FindLocalObject(attackerNetId) : ClientScene.FindLocalObject(attackerNetId);
                 if (go != null)
                     attacker = go.GetComponent<CharacterEntity>();
             }
@@ -243,7 +243,7 @@ public class DamageEntity : MonoBehaviour
             return null;
 
         CharacterEntity attacker = null;
-        var go = ClientScene.FindLocalObject(attackerNetId);
+        var go = NetworkServer.active ? NetworkServer.FindLocalObject(attackerNetId) : ClientScene.FindLocalObject(attackerNetId);
         if (go != null)
             attacker = go.GetComponent<CharacterEntity>();
 

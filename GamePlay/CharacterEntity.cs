@@ -1122,12 +1122,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [ClientRpc]
     public void RpcEffect(NetworkInstanceId triggerId, byte effectType)
     {
-        GameObject triggerObject = null;
-        if (isServer)
-            triggerObject = NetworkServer.FindLocalObject(triggerId);
-        else
-            triggerObject = ClientScene.FindLocalObject(triggerId);
-
+        GameObject triggerObject = isServer ? NetworkServer.FindLocalObject(triggerId) : ClientScene.FindLocalObject(triggerId);
         if (triggerObject != null)
         {
             if (effectType == RPC_EFFECT_DAMAGE_SPAWN || effectType == RPC_EFFECT_DAMAGE_HIT)
