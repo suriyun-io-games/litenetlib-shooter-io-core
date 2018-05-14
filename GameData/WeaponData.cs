@@ -40,7 +40,9 @@ public class WeaponData : ItemData
     {
         if (attacker == null || !NetworkServer.active)
             return;
-        
+
+        var characterColliders = Physics.OverlapSphere(attacker.TempTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
+
         for (int i = 0; i < spread; ++i)
         {
             Transform launchTransform;
@@ -61,7 +63,12 @@ public class WeaponData : ItemData
             msg.attackerNetId = attacker.netId;
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;
-            NetworkServer.SendToAll(msg.OpId, msg);
+            foreach (var characterCollider in characterColliders)
+            {
+                var character = characterCollider.GetComponent<CharacterEntity>();
+                if (character != null && !(character is BotEntity))
+                    NetworkServer.SendToClient(character.connectionToClient.connectionId, msg.OpId, msg);
+            }
         }
 
         attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);

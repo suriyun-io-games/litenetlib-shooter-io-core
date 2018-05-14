@@ -198,6 +198,25 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
+    private bool isHidding;
+    public bool IsHidding
+    {
+        get { return isHidding; }
+        set
+        {
+            if (isHidding == value)
+                return;
+
+            isHidding = value;
+            var renderers = GetComponentsInChildren<Renderer>();
+            foreach (var renderer in renderers)
+                renderer.enabled = !isHidding;
+            var canvases = GetComponentsInChildren<Canvas>();
+            foreach (var canvas in canvases)
+                canvas.enabled = !isHidding;
+        }
+    }
+
     private Transform tempTransform;
     public Transform TempTransform
     {
@@ -836,6 +855,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (WeaponData != null)
             characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
         characterModel.gameObject.SetActive(true);
+        UpdateCharacterModelHiddingState();
     }
 
     protected virtual void OnHeadChanged(string value)
@@ -844,6 +864,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         headData = GameInstance.GetHead(value);
         if (characterModel != null && headData != null)
             characterModel.SetHeadModel(headData.modelObject);
+        UpdateCharacterModelHiddingState();
     }
 
     protected virtual void OnWeaponChanged(int value)
@@ -853,6 +874,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return;
         if (characterModel != null && WeaponData != null)
             characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
+        UpdateCharacterModelHiddingState();
     }
 
     protected virtual void OnWeaponsChanged(string value)
@@ -887,6 +909,15 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 equippedWeapons.Dirty(equipPos);
             }
         }
+    }
+
+    public void UpdateCharacterModelHiddingState()
+    {
+        if (characterModel == null)
+            return;
+        var renderers = characterModel.GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+            renderer.enabled = !IsHidding;
     }
 
     protected void InterruptAttack()

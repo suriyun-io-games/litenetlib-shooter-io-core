@@ -34,16 +34,16 @@ public class BRCharacterEntityExtra : NetworkBehaviour
     private bool botSpawnCalled;
     private bool botDeadRemoveCalled;
     private float lastCircleCheckTime;
-    private bool disableRenderers;
 
     private void Awake()
     {
         TempCharacterEntity.enabled = false;
+        TempCharacterEntity.IsHidding = true;
         var brGameManager = GameplayManager.Singleton as BRGameplayManager;
         var maxRandomDist = 30f;
         if (brGameManager != null)
         {
-            if (brGameManager.currentState != BRState.WaitingForPlayers)
+            if (NetworkServer.active && brGameManager.currentState != BRState.WaitingForPlayers)
             {
                 NetworkServer.Destroy(TempCharacterEntity.gameObject);
                 return;
@@ -101,24 +101,11 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 TempCharacterEntity.TempRigidbody.useGravity = false;
             if (TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = false;
+            TempCharacterEntity.IsHidding = true;
             if (isServer || isLocalPlayer)
             {
                 TempTransform.position = brGameManager.GetSpawnerPosition();
                 TempTransform.rotation = brGameManager.GetSpawnerRotation();
-            }
-            if (!disableRenderers)
-            {
-                var renderers = GetComponentsInChildren<Renderer>();
-                foreach (var renderer in renderers)
-                {
-                    renderer.enabled = false;
-                }
-                var canvases = GetComponentsInChildren<Canvas>();
-                foreach (var canvas in canvases)
-                {
-                    canvas.enabled = false;
-                }
-                disableRenderers = true;
             }
         }
         else if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
@@ -132,20 +119,7 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 TempCharacterEntity.TempRigidbody.useGravity = true;
             if (!TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = true;
-            if (disableRenderers)
-            {
-                var renderers = GetComponentsInChildren<Renderer>();
-                foreach (var renderer in renderers)
-                {
-                    renderer.enabled = true;
-                }
-                var canvases = GetComponentsInChildren<Canvas>();
-                foreach (var canvas in canvases)
-                {
-                    canvas.enabled = true;
-                }
-                disableRenderers = false;
-            }
+            TempCharacterEntity.IsHidding = false;
         }
     }
 
