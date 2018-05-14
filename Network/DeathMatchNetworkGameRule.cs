@@ -15,9 +15,15 @@ public class DeathMatchNetworkGameRule : IONetworkGameRule
     public override bool ShowZeroAssistCountWhenDead { get { return false; } }
     public override bool ShowZeroDieCountWhenDead { get { return false; } }
 
+    protected bool endMatchCalled;
+
     protected override void EndMatch()
     {
-        networkManager.StartCoroutine(EndMatchRoutine());
+        if (!endMatchCalled)
+        {
+            networkManager.StartCoroutine(EndMatchRoutine());
+            endMatchCalled = true;
+        }
     }
 
     IEnumerator EndMatchRoutine()
