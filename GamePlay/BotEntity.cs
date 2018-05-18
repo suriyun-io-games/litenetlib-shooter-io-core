@@ -134,7 +134,7 @@ public class BotEntity : CharacterEntity
                         ServerChangeWeapon(nextPosition);
                 }
                 else
-                    ServerChangeWeapon(0);
+                    ServerChangeWeapon(selectWeaponIndex + 1);
             }
             rotatePosition = enemy.TempTransform.position;
         }
