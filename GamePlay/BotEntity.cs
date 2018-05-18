@@ -127,9 +127,14 @@ public class BotEntity : CharacterEntity
             }
             else
             {
-                var nextPosition = CurrentEquippedWeapon.WeaponData.equipPosition + 1;
-                if (nextPosition < equippedWeapons.Count && !equippedWeapons[nextPosition].IsEmpty())
-                    ServerChangeWeapon(nextPosition);
+                if (WeaponData != null)
+                {
+                    var nextPosition = WeaponData.equipPosition + 1;
+                    if (nextPosition < equippedWeapons.Count && !equippedWeapons[nextPosition].IsEmpty())
+                        ServerChangeWeapon(nextPosition);
+                }
+                else
+                    ServerChangeWeapon(0);
             }
             rotatePosition = enemy.TempTransform.position;
         }
