@@ -34,6 +34,7 @@ public class WeaponData : ItemData
     public AudioClip clipOutFx;
     public AudioClip clipInFx;
     public AudioClip emptyFx;
+    public int weaponAnimId;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
     public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)

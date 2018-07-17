@@ -491,6 +491,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
             animator.SetBool("IsGround", Mathf.Abs(ySpeed) < 0.5f);
         }
 
+        if (WeaponData != null)
+            animator.SetInteger("WeaponAnimId", WeaponData.weaponAnimId);
+
+        animator.SetBool("IsIdle", !animator.GetBool("IsDead") && !animator.GetBool("DoAction") && animator.GetBool("IsGround"));
+
         if (attackingActionId >= 0 && !isPlayingAttackAnim)
             StartCoroutine(AttackRoutine(attackingActionId));
     }
