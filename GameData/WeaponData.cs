@@ -86,7 +86,7 @@ public class WeaponData : ItemData
     public AttackAnimation GetRandomAttackAnimation()
     {
         var list = AttackAnimations.Values.ToList();
-        var randomedIndex = Random.Range(0, list.Count - 1);
+        var randomedIndex = Random.Range(0, list.Count);
         return list[randomedIndex];
     }
 }
