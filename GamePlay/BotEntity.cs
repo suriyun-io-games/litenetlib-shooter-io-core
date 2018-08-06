@@ -54,8 +54,7 @@ public class BotEntity : CharacterEntity
             return;
         }
         // Bots will update target movement when reached move target / hitting the walls / it's time
-        var isReachedTarget = IsReachedTargetPosition();
-        if (isReachedTarget || isWallHit || Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
+        if (isWallHit || Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
         {
             lastUpdateMovementTime = Time.unscaledTime;
             targetPosition = new Vector3(
