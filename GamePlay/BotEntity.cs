@@ -66,27 +66,36 @@ public class BotEntity : CharacterEntity
 
         var rotatePosition = targetPosition;
         CharacterEntity enemy;
-        if (FindEnemy(out enemy) && characteristic == Characteristic.Normal && Time.unscaledTime - lastAttackTime >= attackDuration)
+        if (FindEnemy(out enemy))
         {
-            lastAttackTime = Time.unscaledTime;
-            if (CurrentEquippedWeapon.currentReserveAmmo > 0)
+            if (characteristic == Characteristic.Normal)
             {
-                if (CurrentEquippedWeapon.currentAmmo == 0)
-                    ServerReload();
-                else if (attackingActionId < 0)
-                    attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
-            }
-            else
-            {
-                if (WeaponData != null)
+                if (Time.unscaledTime - lastAttackTime >= attackDuration)
                 {
-                    var nextPosition = WeaponData.equipPosition + 1;
-                    if (nextPosition < equippedWeapons.Count && !equippedWeapons[nextPosition].IsEmpty())
-                        ServerChangeWeapon(nextPosition);
+                    if (CurrentEquippedWeapon.currentReserveAmmo > 0)
+                    {
+                        if (CurrentEquippedWeapon.currentAmmo == 0)
+                            ServerReload();
+                        else if (attackingActionId < 0)
+                            attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
+                    }
+                    else
+                    {
+                        if (WeaponData != null)
+                        {
+                            var nextPosition = WeaponData.equipPosition + 1;
+                            if (nextPosition < equippedWeapons.Count && !equippedWeapons[nextPosition].IsEmpty())
+                                ServerChangeWeapon(nextPosition);
+                        }
+                        else
+                            ServerChangeWeapon(selectWeaponIndex + 1);
+                    }
                 }
-                else
-                    ServerChangeWeapon(selectWeaponIndex + 1);
+                else if (attackingActionId >= 0)
+                    attackingActionId = -1;
             }
+            else if (attackingActionId >= 0)
+                attackingActionId = -1;
             rotatePosition = enemy.TempTransform.position;
         }
         else if (attackingActionId >= 0)
