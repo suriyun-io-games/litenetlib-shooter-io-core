@@ -94,10 +94,13 @@ public class BotEntity : CharacterEntity
             attackingActionId = -1;
 
         // Gets a vector that points from the player's position to the target's.
-        var heading = targetPosition - TempTransform.position;
-        var distance = heading.magnitude;
-        var direction = heading / distance; // This is now the normalized direction.
-        Move(direction);
+        if (!IsReachedTargetPosition())
+            Move((targetPosition - TempTransform.position).normalized);
+        if (IsReachedTargetPosition())
+        {
+            targetPosition = TempTransform.position + (TempTransform.forward * ReachedTargetDistance / 2f);
+            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+        }
         // Rotate to target
         var rotateHeading = rotatePosition - TempTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
