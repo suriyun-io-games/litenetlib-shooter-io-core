@@ -532,7 +532,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 #endif
         InputManager.useMobileInputOnNonMobile = isMobileInput;
 
-        var canAttack = Application.isMobilePlatform || !EventSystem.current.IsPointerOverGameObject();
+        var canAttack = isMobileInput || !EventSystem.current.IsPointerOverGameObject();
         inputMove = Vector2.zero;
         inputDirection = Vector2.zero;
         inputAttack = false;
