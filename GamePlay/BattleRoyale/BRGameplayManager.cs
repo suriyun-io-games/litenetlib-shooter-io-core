@@ -74,7 +74,6 @@ public class BRGameplayManager : GameplayManager
     // make this as field to make client update smoothly
     public float SpawnerMoveCountdown { get; private set; }
     public readonly List<BRCharacterEntityExtra> SpawningCharacters = new List<BRCharacterEntityExtra>();
-    public readonly List<CharacterEntity> SpawnedCharacters = new List<CharacterEntity>();
     private float currentShrinkDuration;
     private float startShrinkRadius;
     private Vector3 startShrinkCenterPosition;
@@ -104,7 +103,8 @@ public class BRGameplayManager : GameplayManager
         var networkGameplayManager = BaseNetworkGameManager.Singleton;
         if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
             return false;
-        return SpawnedCharacters.Contains(character);
+        var extra = character.GetComponent<BRCharacterEntityExtra>();
+        return extra.isSpawned;
     }
 
     private void Update()
@@ -306,7 +306,8 @@ public class BRGameplayManager : GameplayManager
 
     public bool CanSpawnCharacter(CharacterEntity character)
     {
-        return isServer && !SpawnedCharacters.Contains(character) && IsSpawnerInsideSpawnableArea();
+        var extra = character.GetComponent<BRCharacterEntityExtra>();
+        return isServer && (extra == null || !extra.isSpawned) && IsSpawnerInsideSpawnableArea();
     }
 
     public bool IsSpawnerInsideSpawnableArea()
@@ -319,9 +320,7 @@ public class BRGameplayManager : GameplayManager
 
     public Vector3 SpawnCharacter(CharacterEntity character)
     {
-        var spawnPosition = character.TempTransform.position = GetSpawnerPosition();
-        SpawnedCharacters.Add(character);
-        return spawnPosition;
+        return character.TempTransform.position = GetSpawnerPosition();
     }
 
     protected void OnCurrentCountdownChanged(float currentCountdown)
