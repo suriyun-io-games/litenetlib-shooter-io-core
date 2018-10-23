@@ -146,7 +146,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
     
     public System.Action onDead;
-    public readonly Dictionary<uint, PickupEntity> PickableEntities = new Dictionary<uint, PickupEntity>();
+    public readonly HashSet<PickupEntity> PickableEntities = new HashSet<PickupEntity>();
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
 
     protected Coroutine attackRoutine;
@@ -628,7 +628,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         Move(isDashing ? dashDirection : moveDirection);
         Rotate(isDashing ? dashInputMove : inputDirection);
 
-        if (inputAttack)
+        if (inputAttack && GameplayManager.Singleton.CanAttack(this))
             Attack();
         else
             StopAttack();
@@ -811,10 +811,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public void ReceiveDamage(CharacterEntity attacker, int damage)
     {
         var gameplayManager = GameplayManager.Singleton;
-        if (Hp <= 0 || isInvincible || !gameplayManager.CanReceiveDamage(this))
+        if (Hp <= 0 || isInvincible)
             return;
 
         RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
+        if (!gameplayManager.CanReceiveDamage(this))
+            return;
+
         int reduceHp = damage;
         reduceHp -= Mathf.CeilToInt(damage * TotalReduceDamageRate);
         if (Armor > 0)
@@ -953,8 +956,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 var equipPos = weaponData.equipPosition;
                 if (minEquipPos > equipPos)
                 {
-                    if (defaultWeaponIndex == -1)
-                        defaultWeaponIndex = i;
+                    defaultWeaponIndex = equipPos;
                     minEquipPos = equipPos;
                 }
 
@@ -965,6 +967,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 equippedWeapons[equipPos] = equippedWeapon;
                 equippedWeapons.Dirty(equipPos);
             }
+            selectWeaponIndex = defaultWeaponIndex;
         }
     }
 
@@ -1098,7 +1101,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
             // Trigger change weapon
             if (selectWeaponIndex == equipPosition)
             {
-                selectWeaponIndex = defaultWeaponIndex;
                 OnWeaponChanged(selectWeaponIndex);
                 RpcWeaponChanged(selectWeaponIndex);
             }
@@ -1114,7 +1116,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var equipPosition = weaponData.equipPosition;
         var equippedWeapon = equippedWeapons[equipPosition];
         var updated = false;
-        if (equippedWeapon.weaponId.Equals(weaponData.GetId()))
+        if (!string.IsNullOrEmpty(equippedWeapon.weaponId) && equippedWeapon.weaponId.Equals(weaponData.GetId()))
         {
             updated = equippedWeapon.AddReserveAmmo(ammoAmount);
             if (updated)
@@ -1189,6 +1191,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         // Play dash animation on other clients
         RpcDash();
+    }
+
+    [Command]
+    public void CmdPickup(NetworkInstanceId netId)
+    {
+        var go = NetworkServer.FindLocalObject(netId);
+        if (go == null)
+            return;
+        var pickup = go.GetComponent<PickupEntity>();
+        if (pickup == null)
+            return;
+        pickup.Pickup(this);
     }
 
     [ClientRpc]

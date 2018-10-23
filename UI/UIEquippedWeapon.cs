@@ -9,15 +9,10 @@ public class UIEquippedWeapon : UIWeaponSelectEntry
     public Text currentAmmo;
     public Text currentReserveAmmo;
     public EquippedWeapon equippedWeapon;
-    private string dirtyWeaponId;
     protected override void Update()
     {
         base.Update();
-        if (!string.IsNullOrEmpty(equippedWeapon.weaponId) && !equippedWeapon.weaponId.Equals(dirtyWeaponId))
-        {
-            weaponData = equippedWeapon.WeaponData;
-            dirtyWeaponId = equippedWeapon.weaponId;
-        }
+        weaponData = equippedWeapon.WeaponData;
         if (weaponData == null || weaponData.unlimitAmmo)
         {
             if (currentAmmo != null)

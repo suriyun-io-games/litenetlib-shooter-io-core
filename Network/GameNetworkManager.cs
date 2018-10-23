@@ -98,6 +98,11 @@ public class GameNetworkManager : BaseNetworkGameManager
         character.selectCharacter = joinMessage.selectCharacter;
         character.selectWeapons = joinMessage.selectWeapons;
         character.extra = joinMessage.extra;
+        if (gameRule != null && gameRule is IONetworkGameRule)
+        {
+            var ioGameRule = gameRule as IONetworkGameRule;
+            ioGameRule.NewPlayer(character);
+        }
         return character;
     }
 

@@ -25,6 +25,8 @@ public class UIGameplay : MonoBehaviour
     public UIKillNotifies uiKillNotifies;
     public UIRandomAttributes randomAttributes;
     public UIEquippedWeapon[] equippedWeapons;
+    public UIPickupWeapon[] pickupWeapons;
+    public GameObject pickupWeaponContainer;
     public GameObject matchEndUi;
     public GameObject[] mobileOnlyUis;
     public GameObject[] hidingIfDedicateServerUis;
@@ -155,6 +157,35 @@ public class UIGameplay : MonoBehaviour
             }
             else
                 equippedWeapon.gameObject.SetActive(false);
+        }
+        
+        if (pickupWeaponContainer != null)
+            pickupWeaponContainer.SetActive(localCharacter.PickableEntities.Count > 0);
+        if (pickupWeapons != null)
+        {
+            var pickupCounter = 0;
+            foreach (var pickableEntity in localCharacter.PickableEntities)
+            {
+                if (pickupCounter > pickupWeapons.Length)
+                    continue;
+                var pickupWeapon = pickupWeapons[pickupCounter];
+                if (pickupWeapon == null)
+                    continue;
+                pickupWeapon.pickupEntity = pickableEntity;
+                pickupWeapon.gameObject.SetActive(true);
+                pickupCounter++;
+            }
+            while (pickupCounter < pickupWeapons.Length)
+            {
+                if (pickupCounter > pickupWeapons.Length)
+                    continue;
+                var pickupWeapon = pickupWeapons[pickupCounter];
+                if (pickupWeapon == null)
+                    continue;
+                pickupWeapon.pickupEntity = null;
+                pickupWeapon.gameObject.SetActive(false);
+                pickupCounter++;
+            }
         }
 
         if (localCharacter.isReloading)

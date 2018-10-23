@@ -25,18 +25,35 @@ public struct EquippedWeapon
 
     public bool ChangeWeaponId(string id, int ammoAmount)
     {
-        if (string.IsNullOrEmpty(id) || id.Equals(weaponId))
+        if (string.IsNullOrEmpty(id))
             return false;
+        var tempWeaponData = GameInstance.GetWeapon(id);
+        if (tempWeaponData == null)
+            return false;
+        var maxAmmo = tempWeaponData.maxAmmo;
+        var maxReserveAmmo = tempWeaponData.maxReserveAmmo;
+        if (!id.Equals(weaponId))
+        {
+            currentAmmo = ammoAmount;
+            currentReserveAmmo = 0;
+        }
+        else
+        {
+            // Increase reserve ammo if it's same weapon
+            currentReserveAmmo += ammoAmount;
+            // If reserve ammo are full, don't pick up weapon
+            if (currentReserveAmmo == maxReserveAmmo)
+                return false;
+        }
         weaponData = null;
         weaponId = id;
-        currentAmmo = ammoAmount;
-        currentReserveAmmo = 0;
-        var maxAmmo = WeaponData.maxAmmo;
         if (currentAmmo > maxAmmo)
         {
             AddReserveAmmo(currentAmmo - maxAmmo);
             currentAmmo = maxAmmo;
         }
+        if (currentReserveAmmo > maxReserveAmmo)
+            currentReserveAmmo = maxReserveAmmo;
         return true;
     }
 

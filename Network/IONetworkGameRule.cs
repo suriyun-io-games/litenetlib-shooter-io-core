@@ -6,6 +6,7 @@ public class IONetworkGameRule : BaseNetworkGameRule
     public UIGameplay uiGameplayPrefab;
     public CharacterEntity overrideCharacterPrefab;
     public BotEntity overrideBotPrefab;
+    public WeaponData[] startWeapons;
 
     public override bool HasOptionBotCount { get { return true; } }
     public override bool HasOptionMatchTime { get { return false; } }
@@ -15,6 +16,20 @@ public class IONetworkGameRule : BaseNetworkGameRule
     public override bool ShowZeroKillCountWhenDead { get { return true; } }
     public override bool ShowZeroAssistCountWhenDead { get { return true; } }
     public override bool ShowZeroDieCountWhenDead { get { return true; } }
+
+    private string GetStartWeapons()
+    {
+        var selectWeapons = string.Empty;
+        for (var i = 0; i < startWeapons.Length; ++i)
+        {
+            var startWeapon = startWeapons[i];
+            if (!string.IsNullOrEmpty(selectWeapons))
+                selectWeapons += "|";
+            if (startWeapon != null)
+                selectWeapons += startWeapon.GetId();
+        }
+        return selectWeapons;
+    }
 
     protected override BaseNetworkGameCharacter NewBot()
     {
@@ -31,7 +46,15 @@ public class IONetworkGameRule : BaseNetworkGameRule
         botEntity.selectHead = bot.GetSelectHead();
         botEntity.selectCharacter = bot.GetSelectCharacter();
         botEntity.selectWeapons = bot.GetSelectWeapons();
+        if (startWeapons != null && startWeapons.Length > 0)
+            botEntity.selectWeapons = GetStartWeapons();
         return botEntity;
+    }
+
+    public virtual void NewPlayer(CharacterEntity character)
+    {
+        if (startWeapons != null && startWeapons.Length > 0)
+            character.selectWeapons = GetStartWeapons();
     }
 
     protected override void EndMatch()

@@ -104,7 +104,16 @@ public class BRGameplayManager : GameplayManager
         if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
             return false;
         var extra = character.GetComponent<BRCharacterEntityExtra>();
-        return extra.isSpawned;
+        return extra.isSpawned && extra.isGroundOnce;
+    }
+
+    public override bool CanAttack(CharacterEntity character)
+    {
+        var networkGameplayManager = BaseNetworkGameManager.Singleton;
+        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
+            return false;
+        var extra = character.GetComponent<BRCharacterEntityExtra>();
+        return currentState == BRState.WaitingForPlayers || (extra.isSpawned && extra.isGroundOnce);
     }
 
     private void Update()
