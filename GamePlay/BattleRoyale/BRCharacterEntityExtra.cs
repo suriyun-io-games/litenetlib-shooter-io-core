@@ -196,6 +196,11 @@ public class BRCharacterEntityExtra : NetworkBehaviour
     public void RpcRankResult(int rank)
     {
         if (isLocalPlayer)
+        {
+            if (GameNetworkManager.Singleton.gameRule != null &&
+                GameNetworkManager.Singleton.gameRule is BattleRoyaleNetworkGameRule)
+                (GameNetworkManager.Singleton.gameRule as BattleRoyaleNetworkGameRule).SetRewards(rank);
             StartCoroutine(ShowRankResultRoutine(rank));
+        }
     }
 }

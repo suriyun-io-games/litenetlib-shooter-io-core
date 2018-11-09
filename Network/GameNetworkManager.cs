@@ -108,6 +108,16 @@ public class GameNetworkManager : BaseNetworkGameManager
 
     protected override void UpdateScores(NetworkGameScore[] scores)
     {
+        var rank = 0;
+        foreach (var score in scores)
+        {
+            ++rank;
+            if (BaseNetworkGameCharacter.Local != null && score.netId.Equals(BaseNetworkGameCharacter.Local.netId))
+            {
+                (BaseNetworkGameCharacter.Local as CharacterEntity).rank = rank;
+                break;
+            }
+        }
         var uiGameplay = FindObjectOfType<UIGameplay>();
         if (uiGameplay != null)
             uiGameplay.UpdateRankings(scores);
