@@ -41,7 +41,7 @@ public class PowerUpEntity : NetworkBehaviour
                 character.Armor += Mathf.CeilToInt(armor * character.TotalArmorRecoveryRate);
                 character.Exp += Mathf.CeilToInt(exp * character.TotalExpRate);
             }
-            if (character.isLocalPlayer)
+            if (character.isLocalPlayer && !(character is BotEntity))
             {
                 foreach (var currency in currencies)
                 {

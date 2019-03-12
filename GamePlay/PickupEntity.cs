@@ -88,7 +88,8 @@ public class PickupEntity : NetworkBehaviour
 
     private void OnDestroy()
     {
-        (BaseNetworkGameCharacter.Local as CharacterEntity).PickableEntities.Remove(this);
+        if (BaseNetworkGameCharacter.Local != null)
+            (BaseNetworkGameCharacter.Local as CharacterEntity).PickableEntities.Remove(this);
     }
 
     public bool Pickup(CharacterEntity character)
