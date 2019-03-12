@@ -5,7 +5,7 @@ using UnityEngine.Networking;
 
 public class GameInstance : BaseNetworkGameInstance
 {
-    public static GameInstance Singleton { get; private set; }
+    public static new GameInstance Singleton { get; private set; }
     public CharacterEntity characterPrefab;
     public BotEntity botPrefab;
     public CharacterData[] characters;
