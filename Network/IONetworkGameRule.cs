@@ -17,16 +17,13 @@ public class IONetworkGameRule : BaseNetworkGameRule
     public override bool ShowZeroAssistCountWhenDead { get { return true; } }
     public override bool ShowZeroDieCountWhenDead { get { return true; } }
 
-    private string GetStartWeapons()
+    private int[] GetStartWeapons()
     {
-        var selectWeapons = string.Empty;
+        var selectWeapons = new int[startWeapons.Length];
         for (var i = 0; i < startWeapons.Length; ++i)
         {
             var startWeapon = startWeapons[i];
-            if (!string.IsNullOrEmpty(selectWeapons))
-                selectWeapons += "|";
-            if (startWeapon != null)
-                selectWeapons += startWeapon.GetId();
+            selectWeapons[i] = startWeapon.GetHashId();
         }
         return selectWeapons;
     }
@@ -45,16 +42,27 @@ public class IONetworkGameRule : BaseNetworkGameRule
         botEntity.playerName = bot.name;
         botEntity.selectHead = bot.GetSelectHead();
         botEntity.selectCharacter = bot.GetSelectCharacter();
-        botEntity.selectWeapons = bot.GetSelectWeapons();
+        botEntity.selectWeapons.Clear();
         if (startWeapons != null && startWeapons.Length > 0)
-            botEntity.selectWeapons = GetStartWeapons();
+        {
+            foreach (var weapon in GetStartWeapons())
+                botEntity.selectWeapons.Add(weapon);
+        }
+        else
+        {
+            foreach (var weapon in bot.GetSelectWeapons())
+                botEntity.selectWeapons.Add(weapon);
+        }
         return botEntity;
     }
 
     public virtual void NewPlayer(CharacterEntity character)
     {
         if (startWeapons != null && startWeapons.Length > 0)
-            character.selectWeapons = GetStartWeapons();
+        {
+            foreach (var weapon in GetStartWeapons())
+                character.selectWeapons.Add(weapon);
+        }
     }
 
     protected override void EndMatch()

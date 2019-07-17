@@ -242,7 +242,7 @@ public class UIGameplay : MonoBehaviour
         {
             string weaponName = "Unknow Weapon";
             Texture weaponIcon = null;
-            var bombData = GameInstance.GetWeapon(weaponId);
+            var bombData = GameInstance.GetWeapon(weaponId.MakeHashId());
             if (bombData != null)
             {
                 weaponName = bombData.title;

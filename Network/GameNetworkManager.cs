@@ -15,20 +15,28 @@ public class GameNetworkManager : BaseNetworkGameManager
     {
         var msg = new JoinMessage();
         msg.playerName = PlayerSave.GetPlayerName();
-        msg.selectHead = GameInstance.GetAvailableHead(PlayerSave.GetHead()).GetId();
-        msg.selectCharacter = GameInstance.GetAvailableCharacter(PlayerSave.GetCharacter()).GetId();
+        msg.selectHead = GameInstance.GetAvailableHead(PlayerSave.GetHead()).GetHashId();
+        msg.selectCharacter = GameInstance.GetAvailableCharacter(PlayerSave.GetCharacter()).GetHashId();
         // Weapons
         var savedWeapons = PlayerSave.GetWeapons();
-        var selectWeapons = "";
-        foreach (var savedWeapon in savedWeapons)
+        var selectWeapons = new List<int>();
+        foreach (var savedWeapon in savedWeapons.Values)
         {
-            if (!string.IsNullOrEmpty(selectWeapons))
-                selectWeapons += "|";
-            var data = GameInstance.GetAvailableWeapon(savedWeapon.Value);
+            var data = GameInstance.GetAvailableWeapon(savedWeapon);
             if (data != null)
-                selectWeapons += data.GetId();
+                selectWeapons.Add(data.GetHashId());
         }
-        msg.selectWeapons = selectWeapons;
+        msg.selectWeapons = selectWeapons.ToArray();
+        // Custom Equipments
+        var savedCustomEquipments = PlayerSave.GetCustomEquipments();
+        var selectCustomEquipments = new List<int>();
+        foreach (var savedCustomEquipment in savedCustomEquipments)
+        {
+            var data = GameInstance.GetAvailableCustomEquipment(savedCustomEquipment.Value);
+            if (data != null)
+                selectCustomEquipments.Add(data.GetHashId());
+        }
+        msg.selectCustomEquipments = selectCustomEquipments.ToArray();
         return msg;
     }
 
@@ -96,7 +104,14 @@ public class GameNetworkManager : BaseNetworkGameManager
         character.playerName = joinMessage.playerName;
         character.selectHead = joinMessage.selectHead;
         character.selectCharacter = joinMessage.selectCharacter;
-        character.selectWeapons = joinMessage.selectWeapons;
+        foreach (var weapon in joinMessage.selectWeapons)
+        {
+            character.selectWeapons.Add(weapon);
+        }
+        foreach (var customEquipment in joinMessage.selectCustomEquipments)
+        {
+            character.selectCustomEquipments.Add(customEquipment);
+        }
         character.extra = joinMessage.extra;
         if (gameRule != null && gameRule is IONetworkGameRule)
         {
@@ -134,9 +149,10 @@ public class GameNetworkManager : BaseNetworkGameManager
     public class JoinMessage : MessageBase
     {
         public string playerName;
-        public string selectHead;
-        public string selectCharacter;
-        public string selectWeapons;
+        public int selectHead;
+        public int selectCharacter;
+        public int[] selectWeapons;
+        public int[] selectCustomEquipments;
         public string extra;
     }
 }

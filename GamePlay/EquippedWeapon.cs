@@ -8,8 +8,8 @@ public struct EquippedWeapon
 {
     public static readonly EquippedWeapon Empty = new EquippedWeapon();
     [HideInInspector]
-    public string defaultId;
-    public string weaponId;
+    public int defaultId;
+    public int weaponId;
     public int currentAmmo;
     public int currentReserveAmmo;
     private WeaponData weaponData;
@@ -17,16 +17,14 @@ public struct EquippedWeapon
     {
         get
         {
-            if (weaponData == null && !string.IsNullOrEmpty(weaponId))
+            if (weaponData == null)
                 weaponData = GameInstance.GetWeapon(weaponId);
             return weaponData;
         }
     }
 
-    public bool ChangeWeaponId(string id, int ammoAmount)
+    public bool ChangeWeaponId(int id, int ammoAmount)
     {
-        if (string.IsNullOrEmpty(id))
-            return false;
         var tempWeaponData = GameInstance.GetWeapon(id);
         if (tempWeaponData == null)
             return false;

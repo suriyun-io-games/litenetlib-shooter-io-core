@@ -13,7 +13,7 @@ public class OpMsgCharacterAttack : BaseOpMsg
         }
     }
 
-    public string weaponId;
+    public int weaponId;
     public bool isLeftHandWeapon;
     public Vector3 position;
     public Vector3 direction;

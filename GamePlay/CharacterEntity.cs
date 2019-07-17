@@ -118,13 +118,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public int watchAdsCount;
 
     [SyncVar(hook = "OnCharacterChanged")]
-    public string selectCharacter = "";
+    public int selectCharacter = 0;
 
     [SyncVar(hook = "OnHeadChanged")]
-    public string selectHead = "";
-
-    [SyncVar(hook = "OnWeaponsChanged")]
-    public string selectWeapons = "";
+    public int selectHead = 0;
+    
+    public SyncListInt selectWeapons = new SyncListInt();
+    public SyncListInt selectCustomEquipments = new SyncListInt();
 
     [SyncVar(hook = "OnWeaponChanged")]
     public int selectWeaponIndex = -1;
@@ -159,6 +159,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected CharacterModel characterModel;
     protected CharacterData characterData;
     protected HeadData headData;
+    protected Dictionary<int, CustomEquipmentData> customEquipmentDict = new Dictionary<int, CustomEquipmentData>();
     protected int defaultWeaponIndex = -1;
     protected bool isMobileInput;
     protected Vector2 inputMove;
@@ -259,6 +260,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 stats += characterData.stats;
             if (WeaponData != null)
                 stats += WeaponData.stats;
+            if (customEquipmentDict != null)
+            {
+                foreach (var value in customEquipmentDict.Values)
+                    stats += value.stats;
+            }
             return stats;
         }
     }
@@ -389,6 +395,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     private void Awake()
     {
+        selectWeapons.Callback = OnWeaponsChanged;
+        selectCustomEquipments.Callback = OnCustomEquipmentsChanged;
         gameObject.layer = GameInstance.Singleton.characterLayer;
         if (damageLaunchTransform == null)
             damageLaunchTransform = TempTransform;
@@ -409,7 +417,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             OnHeadChanged(selectHead);
             OnCharacterChanged(selectCharacter);
-            OnWeaponsChanged(selectWeapons);
+            OnWeaponsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
+            OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
             OnWeaponChanged(selectWeaponIndex);
         }
     }
@@ -420,7 +429,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
             equippedWeapons.Add(EquippedWeapon.Empty);
         OnHeadChanged(selectHead);
         OnCharacterChanged(selectCharacter);
-        OnWeaponsChanged(selectWeapons);
+        OnWeaponsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
+        OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
         OnWeaponChanged(selectWeaponIndex);
         attackingActionId = -1;
     }
@@ -905,7 +915,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return WeaponData.damagePrefab.GetAttackRange();
     }
 
-    protected virtual void OnCharacterChanged(string value)
+    protected virtual void OnCharacterChanged(int value)
     {
         selectCharacter = value;
         if (characterModel != null)
@@ -925,7 +935,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnHeadChanged(string value)
+    protected virtual void OnHeadChanged(int value)
     {
         selectHead = value;
         headData = GameInstance.GetHead(value);
@@ -944,18 +954,15 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnWeaponsChanged(string value)
+    protected virtual void OnWeaponsChanged(SyncList<int>.Operation op, int itemIndex)
     {
-        selectWeapons = value;
         // Changes weapon list, equip first weapon equipped position
         if (isServer)
         {
-            var splitedData = selectWeapons.Split('|');
             var minEquipPos = int.MaxValue;
-            for (var i = 0; i < splitedData.Length; ++i)
+            for (var i = 0; i < selectWeapons.Count; ++i)
             {
-                var singleData = splitedData[i];
-                var weaponData = GameInstance.GetWeapon(singleData);
+                var weaponData = GameInstance.GetWeapon(selectWeapons[i]);
 
                 if (weaponData == null)
                     continue;
@@ -968,14 +975,32 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 }
 
                 var equippedWeapon = new EquippedWeapon();
-                equippedWeapon.defaultId = weaponData.GetId();
-                equippedWeapon.weaponId = weaponData.GetId();
+                equippedWeapon.defaultId = weaponData.GetHashId();
+                equippedWeapon.weaponId = weaponData.GetHashId();
                 equippedWeapon.SetMaxAmmo();
                 equippedWeapons[equipPos] = equippedWeapon;
-                equippedWeapons.Dirty(equipPos);
             }
             selectWeaponIndex = defaultWeaponIndex;
         }
+    }
+
+    protected virtual void OnCustomEquipmentsChanged(SyncList<int>.Operation op, int itemIndex)
+    {
+        if (characterModel != null)
+            characterModel.ClearCustomModels();
+        customEquipmentDict.Clear();
+        for (var i = 0; i < selectCustomEquipments.Count; ++i)
+        {
+            var customEquipmentData = GameInstance.GetCustomEquipment(selectCustomEquipments[i]);
+            if (customEquipmentData != null &&
+                !customEquipmentDict.ContainsKey(customEquipmentData.containerIndex))
+            {
+                customEquipmentDict[customEquipmentData.containerIndex] = customEquipmentData;
+                if (characterModel != null)
+                    characterModel.SetCustomModel(customEquipmentData.containerIndex, customEquipmentData.modelObject);
+            }
+        }
+        UpdateCharacterModelHiddingState();
     }
 
     public void UpdateCharacterModelHiddingState()
@@ -1096,7 +1121,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return false;
         var equipPosition = weaponData.equipPosition;
         var equippedWeapon = equippedWeapons[equipPosition];
-        var updated = equippedWeapon.ChangeWeaponId(weaponData.GetId(), ammoAmount);
+        var updated = equippedWeapon.ChangeWeaponId(weaponData.GetHashId(), ammoAmount);
         if (updated)
         {
             InterruptAttack();
@@ -1123,7 +1148,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var equipPosition = weaponData.equipPosition;
         var equippedWeapon = equippedWeapons[equipPosition];
         var updated = false;
-        if (!string.IsNullOrEmpty(equippedWeapon.weaponId) && equippedWeapon.weaponId.Equals(weaponData.GetId()))
+        if (equippedWeapon.weaponId.Equals(weaponData.GetId()))
         {
             updated = equippedWeapon.AddReserveAmmo(ammoAmount);
             if (updated)

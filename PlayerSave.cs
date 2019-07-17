@@ -8,6 +8,7 @@ public class PlayerSave
     public const string KeyCharacter = "SaveSelectCharacter";
     public const string KeyHead = "SaveSelectHead";
     public const string KeyWeapons = "SaveSelectWeapons";
+    public const string KeyCustomEquipments = "SaveCustomEquipments";
 
     public static string GetPlayerName()
     {
@@ -68,6 +69,33 @@ public class PlayerSave
             data += value.Key + ":" + value.Value;
         }
         PlayerPrefs.SetString(KeyWeapons, data);
+        PlayerPrefs.Save();
+    }
+
+    public static Dictionary<int, int> GetCustomEquipments()
+    {
+        var data = PlayerPrefs.GetString(KeyCustomEquipments);
+        var splitedData = data.Split('|');
+        Dictionary<int, int> customEquipments = new Dictionary<int, int>();
+        foreach (var singleData in splitedData)
+        {
+            var splitedKeyPair = singleData.Split(':');
+            if (splitedKeyPair.Length == 2)
+                customEquipments.Add(int.Parse(splitedKeyPair[0]), int.Parse(splitedKeyPair[1]));
+        }
+        return customEquipments;
+    }
+
+    public static void SetCustomEquipments(Dictionary<int, int> values)
+    {
+        var data = "";
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrEmpty(data))
+                data += "|";
+            data += value.Key + ":" + value.Value;
+        }
+        PlayerPrefs.SetString(KeyCustomEquipments, data);
         PlayerPrefs.Save();
     }
 }
