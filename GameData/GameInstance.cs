@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class GameInstance : BaseNetworkGameInstance
 {
@@ -67,6 +68,10 @@ public class GameInstance : BaseNetworkGameInstance
     protected override void Start()
     {
         base.Start();
+        if (characterPrefab != null && !ClientScene.prefabs.ContainsValue(characterPrefab.gameObject))
+            ClientScene.RegisterPrefab(characterPrefab.gameObject);
+        if (botPrefab != null && !ClientScene.prefabs.ContainsValue(botPrefab.gameObject))
+            ClientScene.RegisterPrefab(botPrefab.gameObject);
         UpdateAvailableItems();
         ValidatePlayerSave();
     }
