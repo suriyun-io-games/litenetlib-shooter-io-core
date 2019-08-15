@@ -931,6 +931,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
             characterModel.SetHeadModel(headData.modelObject);
         if (WeaponData != null)
             characterModel.SetWeaponModel(WeaponData.rightHandObject, WeaponData.leftHandObject, WeaponData.shieldObject);
+        if (customEquipmentDict != null)
+        {
+            characterModel.ClearCustomModels();
+            foreach (var customEquipmentEntry in customEquipmentDict.Values)
+            {
+                characterModel.SetCustomModel(customEquipmentEntry.containerIndex, customEquipmentEntry.modelObject);
+            }
+        }
         characterModel.gameObject.SetActive(true);
         UpdateCharacterModelHiddingState();
     }
