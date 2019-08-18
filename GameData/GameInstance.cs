@@ -221,4 +221,26 @@ public class GameInstance : BaseNetworkGameInstance
             index = 0;
         return AvailableCustomEquipments[index];
     }
+
+    public List<ItemData> GetAllItems()
+    {
+        List<ItemData> allItems = new List<ItemData>();
+        foreach (var character in characters)
+        {
+            allItems.Add(character);
+        }
+        foreach (var head in heads)
+        {
+            allItems.Add(head);
+        }
+        foreach (var weapon in weapons)
+        {
+            allItems.Add(weapon);
+        }
+        foreach (var customEquipment in customEquipments)
+        {
+            allItems.Add(customEquipment);
+        }
+        return allItems;
+    }
 }
