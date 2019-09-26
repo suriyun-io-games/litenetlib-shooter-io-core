@@ -616,7 +616,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void Move(Vector3 direction)
     {
-        if (direction.magnitude != 0)
+        if (direction.magnitude > 0)
         {
             if (direction.magnitude > 1)
                 direction = direction.normalized;
@@ -643,6 +643,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var dashDirection = new Vector3(dashInputMove.x, 0, dashInputMove.y);
 
         Move(isDashing ? dashDirection : moveDirection);
+        // Turn character to move direction
+        if (inputDirection.magnitude <= 0 && inputMove.magnitude > 0)
+            inputDirection = inputMove;
         Rotate(isDashing ? dashInputMove : inputDirection);
 
         if (inputAttack && GameplayManager.Singleton.CanAttack(this))
