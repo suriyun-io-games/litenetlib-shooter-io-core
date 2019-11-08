@@ -63,11 +63,7 @@ public class GameInstance : BaseNetworkGameInstance
         {
             CustomEquipments[customEquipment.GetHashId()] = customEquipment;
         }
-    }
 
-    protected override void Start()
-    {
-        base.Start();
         if (characterPrefab != null && !ClientScene.prefabs.ContainsValue(characterPrefab.gameObject))
             ClientScene.RegisterPrefab(characterPrefab.gameObject);
         if (botPrefab != null && !ClientScene.prefabs.ContainsValue(botPrefab.gameObject))
