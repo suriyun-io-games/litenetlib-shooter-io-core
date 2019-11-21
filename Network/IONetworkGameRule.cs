@@ -61,6 +61,7 @@ public class IONetworkGameRule : BaseNetworkGameRule
     {
         if (startWeapons != null && startWeapons.Length > 0)
         {
+            character.selectWeapons.Clear();
             foreach (var weapon in GetStartWeapons())
                 character.selectWeapons.Add(weapon);
         }
