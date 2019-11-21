@@ -23,7 +23,8 @@ public class IONetworkGameRule : BaseNetworkGameRule
         for (var i = 0; i < startWeapons.Length; ++i)
         {
             var startWeapon = startWeapons[i];
-            selectWeapons[i] = startWeapon.GetHashId();
+            if (startWeapon != null)
+                selectWeapons[i] = startWeapon.GetHashId();
         }
         return selectWeapons;
     }
