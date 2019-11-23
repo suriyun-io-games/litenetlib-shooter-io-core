@@ -38,6 +38,11 @@ public class GameInstance : BaseNetworkGameInstance
         Singleton = this;
         DontDestroyOnLoad(gameObject);
         Physics.IgnoreLayerCollision(characterLayer, characterLayer, true);
+    }
+
+    protected override void Start()
+    {
+        base.Start();
 
         Heads.Clear();
         foreach (var head in heads)
@@ -64,10 +69,6 @@ public class GameInstance : BaseNetworkGameInstance
             CustomEquipments[customEquipment.GetHashId()] = customEquipment;
         }
 
-        if (characterPrefab != null && !ClientScene.prefabs.ContainsValue(characterPrefab.gameObject))
-            ClientScene.RegisterPrefab(characterPrefab.gameObject);
-        if (botPrefab != null && !ClientScene.prefabs.ContainsValue(botPrefab.gameObject))
-            ClientScene.RegisterPrefab(botPrefab.gameObject);
         UpdateAvailableItems();
         ValidatePlayerSave();
     }

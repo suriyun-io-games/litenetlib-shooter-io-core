@@ -21,6 +21,7 @@ public class UIMainMenu : MonoBehaviour
     public UILanNetworking lanNetworkingDialog;
     private int selectCharacter = 0;
     private int selectHead = 0;
+    private bool readyToUpdate;
     // Showing character / items
     public CharacterModel characterModel;
     public CharacterData characterData;
@@ -68,13 +69,22 @@ public class UIMainMenu : MonoBehaviour
 
     private void Start()
     {
-        inputName.text = PlayerSave.GetPlayerName();
-        SelectHead = PlayerSave.GetHead();
-        SelectCharacter = PlayerSave.GetCharacter();
+        StartCoroutine(StartRoutine());
     }
+
+    private IEnumerator StartRoutine()
+    {
+        yield return null;
+        OnClickLoadData();
+        readyToUpdate = true;
+    }
+
 
     private void Update()
     {
+        if (!readyToUpdate)
+            return;
+
         textSelectCharacter.text = (SelectCharacter + 1) + "/" + (MaxCharacter + 1);
         textSelectHead.text = (SelectHead + 1) + "/" + (MaxHead + 1);
 
@@ -189,6 +199,13 @@ public class UIMainMenu : MonoBehaviour
         PlayerSave.SetCharacter(SelectCharacter);
         PlayerSave.SetHead(SelectHead);
         PlayerSave.SetPlayerName(inputName.text);
+    }
+
+    public void OnClickLoadData()
+    {
+        inputName.text = PlayerSave.GetPlayerName();
+        SelectHead = PlayerSave.GetHead();
+        SelectCharacter = PlayerSave.GetCharacter();
     }
 
     public void OnClickLan()
