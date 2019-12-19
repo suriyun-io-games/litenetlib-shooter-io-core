@@ -38,6 +38,11 @@ public class BRGameplayManager : GameplayManager
     public SimpleCubeData spawnableArea;
     public BRPattern[] patterns;
     public GameObject circleObject;
+    public GameObject airplanePrefab;
+
+    private bool spawnedAirplane;
+    private GameObject airplane;
+
     [Header("Sync Vars")]
     [SyncVar]
     public int currentCircle;
@@ -130,7 +135,28 @@ public class BRGameplayManager : GameplayManager
         if (CurrentCountdown > 0)
             CurrentCountdown -= Time.deltaTime;
         if (SpawnerMoveCountdown > 0)
-            SpawnerMoveCountdown -= Time.deltaTime;
+        {
+            SpawnerMoveCountdown -= Time.unscaledDeltaTime;
+            if (!spawnedAirplane)
+            {
+                spawnedAirplane = true;
+                if (airplanePrefab != null)
+                    airplane = Instantiate(airplanePrefab);
+            }
+            if (airplane != null)
+            {
+                airplane.transform.position = GetSpawnerPosition();
+                airplane.transform.rotation = GetSpawnerRotation();
+            }
+        }
+        else
+        {
+            if (spawnedAirplane)
+            {
+                if (airplane != null)
+                    Destroy(airplane);
+            }
+        }
     }
 
     private void UpdateGameState()

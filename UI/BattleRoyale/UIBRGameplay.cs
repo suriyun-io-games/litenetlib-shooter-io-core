@@ -7,6 +7,7 @@ public class UIBRGameplay : MonoBehaviour
 {
     public static UIBRGameplay Singleton { get; private set; }
     public GameObject uiSpawn;
+    public GameObject uiCanSpawn;
     public GameObject uiRankResult;
     public Text textRank;
     public Text textGameState;
@@ -25,6 +26,7 @@ public class UIBRGameplay : MonoBehaviour
     private void Update()
     {
         var localCharacter = BaseNetworkGameCharacter.Local;
+        var brCharacter = localCharacter == null ? null : localCharacter.GetComponent<BRCharacterEntityExtra>();
         var networkManager = BaseNetworkGameManager.Singleton;
         var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
         if (brGameplayManager != null)
@@ -67,14 +69,16 @@ public class UIBRGameplay : MonoBehaviour
                 }
             }
 
-            if (localCharacter != null && uiSpawn != null)
+            if (uiSpawn != null)
             {
-                var brCharacter = localCharacter.GetComponent<BRCharacterEntityExtra>();
-                if (brCharacter != null && brGameplayManager.currentState != BRState.WaitingForPlayers)
-                    uiSpawn.SetActive(!brCharacter.isSpawned);
+                if (brGameplayManager.currentState != BRState.WaitingForPlayers)
+                    uiSpawn.SetActive(brCharacter == null || !brCharacter.isSpawned);
                 else if (brGameplayManager.currentState == BRState.WaitingForPlayers)
                     uiSpawn.SetActive(false);
             }
+
+            if (uiCanSpawn != null)
+                uiCanSpawn.SetActive(brGameplayManager.IsSpawnerInsideSpawnableArea() && (brCharacter == null || !brCharacter.isSpawned));
         }
     }
 
