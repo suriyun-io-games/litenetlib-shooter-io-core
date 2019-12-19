@@ -15,8 +15,10 @@ public class GameNetworkManager : BaseNetworkGameManager
     {
         var msg = new JoinMessage();
         msg.playerName = PlayerSave.GetPlayerName();
-        msg.selectHead = GameInstance.GetAvailableHead(PlayerSave.GetHead()).GetHashId();
-        msg.selectCharacter = GameInstance.GetAvailableCharacter(PlayerSave.GetCharacter()).GetHashId();
+        var headData = GameInstance.GetAvailableHead(PlayerSave.GetHead());
+        var characterData = GameInstance.GetAvailableCharacter(PlayerSave.GetCharacter());
+        msg.selectHead = headData != null ? headData.GetHashId() : 0;
+        msg.selectCharacter = characterData != null ? characterData.GetHashId() : 0;
         // Weapons
         var savedWeapons = PlayerSave.GetWeapons();
         var selectWeapons = new List<int>();
