@@ -98,8 +98,8 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 botSpawnCalled = true;
                 StartCoroutine(BotSpawnRoutine());
             }
-            if (TempCharacterEntity.TempRigidbody.useGravity)
-                TempCharacterEntity.TempRigidbody.useGravity = false;
+            if (TempCharacterEntity.CacheRigidbody.useGravity)
+                TempCharacterEntity.CacheRigidbody.useGravity = false;
             if (TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = false;
             TempCharacterEntity.IsHidding = true;
@@ -116,8 +116,8 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 botDeadRemoveCalled = true;
                 StartCoroutine(BotDeadRemoveRoutine());
             }
-            if (!TempCharacterEntity.TempRigidbody.useGravity)
-                TempCharacterEntity.TempRigidbody.useGravity = true;
+            if (!TempCharacterEntity.CacheRigidbody.useGravity)
+                TempCharacterEntity.CacheRigidbody.useGravity = true;
             if (!TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = true;
             TempCharacterEntity.IsHidding = false;
@@ -187,9 +187,9 @@ public class BRCharacterEntityExtra : NetworkBehaviour
     [ClientRpc]
     public void RpcCharacterSpawned(Vector3 spawnPosition)
     {
-        TempCharacterEntity.TempTransform.position = spawnPosition;
-        TempCharacterEntity.TempRigidbody.useGravity = true;
-        TempCharacterEntity.TempRigidbody.isKinematic = false;
+        TempCharacterEntity.CacheTransform.position = spawnPosition;
+        TempCharacterEntity.CacheRigidbody.useGravity = true;
+        TempCharacterEntity.CacheRigidbody.isKinematic = false;
     }
 
     [ClientRpc]

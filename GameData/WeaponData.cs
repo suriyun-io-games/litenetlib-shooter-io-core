@@ -42,7 +42,7 @@ public class WeaponData : ItemData
         if (attacker == null || !NetworkServer.active)
             return;
 
-        var characterColliders = Physics.OverlapSphere(attacker.TempTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
+        var characterColliders = Physics.OverlapSphere(attacker.CacheTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
 
         for (int i = 0; i < spread; ++i)
         {
@@ -54,7 +54,7 @@ public class WeaponData : ItemData
             var addRotationX = Random.Range(-staggerY, staggerY);
             var addRotationY = Random.Range(-staggerX, staggerX);
             var position = launchTransform.position;
-            var direction = attacker.TempTransform.forward;
+            var direction = attacker.CacheTransform.forward;
             var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
             var msg = new OpMsgCharacterAttack();

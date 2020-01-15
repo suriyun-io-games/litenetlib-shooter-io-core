@@ -224,26 +224,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    private Transform tempTransform;
-    public Transform TempTransform
-    {
-        get
-        {
-            if (tempTransform == null)
-                tempTransform = GetComponent<Transform>();
-            return tempTransform;
-        }
-    }
-    private Rigidbody tempRigidbody;
-    public Rigidbody TempRigidbody
-    {
-        get
-        {
-            if (tempRigidbody == null)
-                tempRigidbody = GetComponent<Rigidbody>();
-            return tempRigidbody;
-        }
-    }
+    public Transform CacheTransform { get; private set; }
+    public Rigidbody CacheRigidbody { get; private set; }
+    public Collider CacheCollider { get; private set; }
 
     public virtual CharacterStats SumAddStats
     {
@@ -395,12 +378,15 @@ public class CharacterEntity : BaseNetworkGameCharacter
         selectWeapons.Callback = OnWeaponsChanged;
         selectCustomEquipments.Callback = OnCustomEquipmentsChanged;
         gameObject.layer = GameInstance.Singleton.characterLayer;
+        CacheTransform = transform;
+        CacheRigidbody = GetComponent<Rigidbody>();
+        CacheCollider = GetComponent<Collider>();
         if (damageLaunchTransform == null)
-            damageLaunchTransform = TempTransform;
+            damageLaunchTransform = CacheTransform;
         if (effectTransform == null)
-            effectTransform = TempTransform;
+            effectTransform = CacheTransform;
         if (characterModelTransform == null)
-            characterModelTransform = TempTransform;
+            characterModelTransform = CacheTransform;
         foreach (var localPlayerObject in localPlayerObjects)
         {
             localPlayerObject.SetActive(false);
@@ -437,7 +423,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         base.OnStartLocalPlayer();
 
         var followCam = FindObjectOfType<FollowCamera>();
-        followCam.target = TempTransform;
+        followCam.target = CacheTransform;
         targetCamera = followCam.GetComponent<Camera>();
         var uiGameplay = FindObjectOfType<UIGameplay>();
         if (uiGameplay != null)
@@ -515,7 +501,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
         else
         {
-            var velocity = TempRigidbody.velocity;
+            var velocity = CacheRigidbody.velocity;
             var xzMagnitude = new Vector3(velocity.x, 0, velocity.z).magnitude;
             var ySpeed = velocity.y;
             animator.SetBool("IsDead", false);
@@ -579,7 +565,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 }
                 else
                 {
-                    inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
+                    inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(CacheTransform.position)).normalized;
                     if (canAttack)
                         inputAttack = InputManager.GetButton("Fire1");
                 }
@@ -598,7 +584,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 if (isDashing)
                 {
                     inputAttack = false;
-                    dashInputMove = new Vector2(TempTransform.forward.x, TempTransform.forward.z).normalized;
+                    dashInputMove = new Vector2(CacheTransform.forward.x, CacheTransform.forward.z).normalized;
                     dashingTime = Time.unscaledTime;
                     CmdDash();
                 }
@@ -622,12 +608,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
             var targetVelocity = direction * targetSpeed;
 
             // Apply a force that attempts to reach our target velocity
-            Vector3 velocity = TempRigidbody.velocity;
+            Vector3 velocity = CacheRigidbody.velocity;
             Vector3 velocityChange = (targetVelocity - velocity);
             velocityChange.x = Mathf.Clamp(velocityChange.x, -targetSpeed, targetSpeed);
             velocityChange.y = 0;
             velocityChange.z = Mathf.Clamp(velocityChange.z, -targetSpeed, targetSpeed);
-            TempRigidbody.AddForce(velocityChange, ForceMode.VelocityChange);
+            CacheRigidbody.AddForce(velocityChange, ForceMode.VelocityChange);
         }
     }
     
@@ -650,10 +636,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
         else
             StopAttack();
 
-        var velocity = TempRigidbody.velocity;
+        var velocity = CacheRigidbody.velocity;
         if (isGround && inputJump)
         {
-            TempRigidbody.velocity = new Vector3(velocity.x, CalculateJumpVerticalSpeed(), velocity.z);
+            CacheRigidbody.velocity = new Vector3(velocity.x, CalculateJumpVerticalSpeed(), velocity.z);
             isGround = false;
             inputJump = false;
         }
@@ -684,7 +670,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             int newRotation = (int)(Quaternion.LookRotation(new Vector3(direction.x, 0, direction.y)).eulerAngles.y + targetCamera.transform.eulerAngles.y);
             Quaternion targetRotation = Quaternion.Euler(0, newRotation, 0);
-            TempTransform.rotation = targetRotation;
+            CacheTransform.rotation = targetRotation;
         }
     }
     
@@ -765,7 +751,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
                 // Random play shoot sounds
                 if (WeaponData.attackFx != null && WeaponData.attackFx.Length > 0 && AudioManager.Singleton != null)
-                    AudioSource.PlayClipAtPoint(WeaponData.attackFx[Random.Range(0, WeaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+                    AudioSource.PlayClipAtPoint(WeaponData.attackFx[Random.Range(0, WeaponData.attackFx.Length - 1)], CacheTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
 
                 // Wait till animation end
                 yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
@@ -792,7 +778,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 reloadDuration = WeaponData.reloadDuration;
                 startReloadTime = Time.unscaledTime;
                 if (WeaponData.clipOutFx != null && AudioManager.Singleton != null)
-                    AudioSource.PlayClipAtPoint(WeaponData.clipOutFx, TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+                    AudioSource.PlayClipAtPoint(WeaponData.clipOutFx, CacheTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
                 yield return new WaitForSeconds(reloadDuration);
                 if (isServer)
                 {
@@ -802,7 +788,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                     equippedWeapons.Dirty(selectWeaponIndex);
                 }
                 if (WeaponData.clipInFx != null && AudioManager.Singleton != null)
-                    AudioSource.PlayClipAtPoint(WeaponData.clipInFx, TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+                    AudioSource.PlayClipAtPoint(WeaponData.clipInFx, CacheTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
             }
             // If player still attacking, random new attacking action id
             if (isServer && attackingActionId >= 0 && WeaponData != null)
@@ -832,7 +818,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return;
 
         RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
-        if (!gameplayManager.CanReceiveDamage(this))
+        if (!gameplayManager.CanReceiveDamage(this, attacker))
             return;
 
         int reduceHp = damage;
@@ -1061,7 +1047,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             ServerInvincible();
             OnSpawn();
             var position = GetSpawnPosition();
-            TempTransform.position = position;
+            CacheTransform.position = position;
             if (connectionToClient != null)
                 TargetSpawn(connectionToClient, position);
             ServerRevive();

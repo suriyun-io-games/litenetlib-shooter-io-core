@@ -175,24 +175,33 @@ public class GameplayManager : NetworkBehaviour
     public virtual bool CanRespawn(CharacterEntity character)
     {
         var networkGameplayManager = BaseNetworkGameManager.Singleton;
-        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
-            return false;
+        if (networkGameplayManager != null)
+        {
+            if (networkGameplayManager.IsMatchEnded)
+                return false;
+        }
         return true;
     }
 
-    public virtual bool CanReceiveDamage(CharacterEntity character)
+    public virtual bool CanReceiveDamage(CharacterEntity damageReceiver, CharacterEntity attacker)
     {
         var networkGameplayManager = BaseNetworkGameManager.Singleton;
-        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
-            return false;
+        if (networkGameplayManager != null)
+        {
+            if (networkGameplayManager.IsMatchEnded)
+                return false;
+        }
         return true;
     }
 
     public virtual bool CanAttack(CharacterEntity character)
     {
         var networkGameplayManager = BaseNetworkGameManager.Singleton;
-        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
-            return false;
+        if (networkGameplayManager != null)
+        {
+            if (networkGameplayManager.IsMatchEnded)
+                return false;
+        }
         return true;
     }
 }

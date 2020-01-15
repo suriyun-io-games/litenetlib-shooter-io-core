@@ -103,13 +103,11 @@ public class BRGameplayManager : GameplayManager
         return false;
     }
 
-    public override bool CanReceiveDamage(CharacterEntity character)
+    public override bool CanReceiveDamage(CharacterEntity damageReceiver, CharacterEntity attacker)
     {
-        var networkGameplayManager = BaseNetworkGameManager.Singleton;
-        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
-            return false;
-        var extra = character.GetComponent<BRCharacterEntityExtra>();
-        return extra.isSpawned && extra.isGroundOnce;
+        if (base.CanReceiveDamage(damageReceiver, attacker))
+            return damageReceiver.GetComponent<BRCharacterEntityExtra>().isSpawned;
+        return false;
     }
 
     public override bool CanAttack(CharacterEntity character)
@@ -355,7 +353,7 @@ public class BRGameplayManager : GameplayManager
 
     public Vector3 SpawnCharacter(CharacterEntity character)
     {
-        return character.TempTransform.position = GetSpawnerPosition();
+        return character.CacheTransform.position = GetSpawnerPosition();
     }
 
     protected void OnCurrentCountdownChanged(float currentCountdown)

@@ -37,32 +37,17 @@ public class DamageEntity : MonoBehaviour
             return attacker;
         }
     }
-    private Transform tempTransform;
-    public Transform TempTransform
-    {
-        get
-        {
-            if (tempTransform == null)
-                tempTransform = GetComponent<Transform>();
-            return tempTransform;
-        }
-    }
-    private Rigidbody tempRigidbody;
-    public Rigidbody TempRigidbody
-    {
-        get
-        {
-            if (tempRigidbody == null)
-                tempRigidbody = GetComponent<Rigidbody>();
-            return tempRigidbody;
-        }
-    }
+    public Transform CacheTransform { get; private set; }
+    public Rigidbody CacheRigidbody { get; private set; }
+    public Collider CacheCollider { get; private set; }
 
     private void Awake()
     {
         gameObject.layer = Physics.IgnoreRaycastLayer;
-        var collider = GetComponent<Collider>();
-        collider.isTrigger = true;
+        CacheTransform = transform;
+        CacheRigidbody = GetComponent<Rigidbody>();
+        CacheCollider = GetComponent<Collider>();
+        CacheCollider.isTrigger = true;
     }
 
     private void Start()
@@ -91,9 +76,9 @@ public class DamageEntity : MonoBehaviour
         {
             Transform damageLaunchTransform;
             Attacker.GetDamageLaunchTransform(isLeftHandWeapon, out damageLaunchTransform);
-            TempTransform.SetParent(damageLaunchTransform);
-            var baseAngles = attacker.TempTransform.eulerAngles;
-            TempTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
+            CacheTransform.SetParent(damageLaunchTransform);
+            var baseAngles = attacker.CacheTransform.eulerAngles;
+            CacheTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
         }
     }
 
@@ -108,27 +93,27 @@ public class DamageEntity : MonoBehaviour
         {
             if (relateToAttacker)
             {
-                if (TempTransform.parent == null)
+                if (CacheTransform.parent == null)
                 {
                     Transform damageLaunchTransform;
                     Attacker.GetDamageLaunchTransform(isLeftHandWeapon, out damageLaunchTransform);
-                    TempTransform.SetParent(damageLaunchTransform);
+                    CacheTransform.SetParent(damageLaunchTransform);
                 }
-                var baseAngles = attacker.TempTransform.eulerAngles;
-                TempTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
-                TempRigidbody.velocity = Attacker.TempRigidbody.velocity + GetForwardVelocity();
+                var baseAngles = attacker.CacheTransform.eulerAngles;
+                CacheTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
+                CacheRigidbody.velocity = Attacker.CacheRigidbody.velocity + GetForwardVelocity();
             }
             else
-                TempRigidbody.velocity = GetForwardVelocity();
+                CacheRigidbody.velocity = GetForwardVelocity();
         }
         else
-            TempRigidbody.velocity = GetForwardVelocity();
+            CacheRigidbody.velocity = GetForwardVelocity();
     }
 
     private void OnDestroy()
     {
         if (!isDead)
-            EffectEntity.PlayEffect(explodeEffectPrefab, TempTransform);
+            EffectEntity.PlayEffect(explodeEffectPrefab, CacheTransform);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -148,7 +133,7 @@ public class DamageEntity : MonoBehaviour
             ApplyDamage(otherCharacter);
         }
         
-        Collider[] colliders = Physics.OverlapSphere(TempTransform.position, radius, 1 << GameInstance.Singleton.characterLayer);
+        Collider[] colliders = Physics.OverlapSphere(CacheTransform.position, radius, 1 << GameInstance.Singleton.characterLayer);
         for (int i = 0; i < colliders.Length; i++)
         {
             var target = colliders[i].GetComponent<CharacterEntity>();
@@ -167,7 +152,7 @@ public class DamageEntity : MonoBehaviour
         {
             // Play hit effect
             if (hitFx != null && hitFx.Length > 0 && AudioManager.Singleton != null)
-                AudioSource.PlayClipAtPoint(hitFx[Random.Range(0, hitFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+                AudioSource.PlayClipAtPoint(hitFx[Random.Range(0, hitFx.Length - 1)], CacheTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
         }
         
         Destroy(gameObject);
@@ -194,7 +179,7 @@ public class DamageEntity : MonoBehaviour
 
     public Vector3 GetForwardVelocity()
     {
-        return TempTransform.forward * speed * GameplayManager.REAL_MOVE_SPEED_RATE;
+        return CacheTransform.forward * speed * GameplayManager.REAL_MOVE_SPEED_RATE;
     }
 
     public static DamageEntity InstantiateNewEntity(OpMsgCharacterAttack msg)
@@ -238,7 +223,7 @@ public class DamageEntity : MonoBehaviour
         {
             Transform launchTransform;
             attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
-            position = launchTransform.position + attacker.TempTransform.forward * prefab.spawnForwardOffset;
+            position = launchTransform.position + attacker.CacheTransform.forward * prefab.spawnForwardOffset;
         }
         var rotation = Quaternion.LookRotation(direction, Vector3.up);
         rotation = Quaternion.Euler(rotation.eulerAngles + new Vector3(addRotationX, addRotationY));

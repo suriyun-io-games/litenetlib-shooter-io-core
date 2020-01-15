@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class BotEntity : CharacterEntity
@@ -10,17 +11,28 @@ public class BotEntity : CharacterEntity
         NoneAttack
     }
     public const float ReachedTargetDistance = 0.1f;
-    public float updateMovementDuration = 2;
-    public float attackDuration = 0;
+    public float updateMovementDuration = 2f;
+    public float attackDuration = 0f;
+    public float forgetEnemyDuration = 3f;
+    public float randomDashDurationMin = 3f;
+    public float randomDashDurationMax = 5f;
     public float randomMoveDistance = 5f;
     public float detectEnemyDistance = 2f;
     public float turnSpeed = 5f;
     public Characteristic characteristic;
     public CharacterStats startAddStats;
+    [HideInInspector, System.NonSerialized]
+    public bool isFixRandomMoveAroundPoint;
+    [HideInInspector, System.NonSerialized]
+    public Vector3 fixRandomMoveAroundPoint;
+    [HideInInspector, System.NonSerialized]
+    public float fixRandomMoveAroundDistance;
     private Vector3 targetPosition;
     private float lastUpdateMovementTime;
     private float lastAttackTime;
-    private bool isWallHit;
+    private float randomDashDuration;
+    private CharacterEntity enemy;
+
     public override void OnStartServer()
     {
         base.OnStartServer();
@@ -28,6 +40,7 @@ public class BotEntity : CharacterEntity
         ServerSpawn(false);
         lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
         lastAttackTime = Time.unscaledTime - attackDuration;
+        randomDashDuration = dashDuration + Random.Range(randomDashDurationMin, randomDashDurationMax);
     }
 
     public override void OnStartLocalPlayer()
@@ -42,7 +55,7 @@ public class BotEntity : CharacterEntity
 
         if (GameNetworkManager.Singleton.numPlayers <= 0)
         {
-            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+            CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
             attackingActionId = -1;
             return;
         }
@@ -50,28 +63,65 @@ public class BotEntity : CharacterEntity
         if (Hp <= 0)
         {
             ServerRespawn(false);
-            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+            CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
             return;
         }
+
         // Bots will update target movement when reached move target / hitting the walls / it's time
-        if (isWallHit || Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
+        var isReachedTarget = IsReachedTargetPosition();
+        if (isReachedTarget || Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
         {
             lastUpdateMovementTime = Time.unscaledTime;
-            targetPosition = new Vector3(
-                TempTransform.position.x + Random.Range(-randomMoveDistance, randomMoveDistance),
-                0,
-                TempTransform.position.z + Random.Range(-randomMoveDistance, randomMoveDistance));
-            isWallHit = false;
+            if (enemy != null)
+            {
+                targetPosition = new Vector3(
+                    enemy.CacheTransform.position.x + Random.Range(-1f, 1f) * detectEnemyDistance,
+                    0,
+                    enemy.CacheTransform.position.z + Random.Range(-1, 1f) * detectEnemyDistance);
+            }
+            else if (isFixRandomMoveAroundPoint)
+            {
+                targetPosition = new Vector3(
+                    fixRandomMoveAroundPoint.x + Random.Range(-1f, 1f) * fixRandomMoveAroundDistance,
+                    0,
+                    fixRandomMoveAroundPoint.z + Random.Range(-1f, 1f) * fixRandomMoveAroundDistance);
+            }
+            else
+            {
+                targetPosition = new Vector3(
+                    CacheTransform.position.x + Random.Range(-1f, 1f) * randomMoveDistance,
+                    0,
+                    CacheTransform.position.z + Random.Range(-1f, 1f) * randomMoveDistance);
+            }
         }
 
         var rotatePosition = targetPosition;
-        CharacterEntity enemy;
-        if (FindEnemy(out enemy))
+        if (enemy == null || enemy.IsDead || Time.unscaledTime - lastAttackTime >= forgetEnemyDuration)
+        {
+            // Try find enemy. If found move to target in next frame
+            if (FindEnemy(out enemy))
+            {
+                lastAttackTime = Time.unscaledTime;
+                lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
+            }
+        }
+        else
+        {
+            // Set target rotation to enemy position
+            rotatePosition = enemy.CacheTransform.position;
+        }
+
+        attackingActionId = -1;
+        if (enemy != null)
         {
             if (characteristic == Characteristic.Normal)
             {
-                if (Time.unscaledTime - lastAttackTime >= attackDuration)
+                if (Time.unscaledTime - lastAttackTime >= attackDuration &&
+                    Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
                 {
+                    // Attack when nearby enemy
+                    attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
+                    lastAttackTime = Time.unscaledTime;
                     if (CurrentEquippedWeapon.currentReserveAmmo > 0)
                     {
                         if (CurrentEquippedWeapon.currentAmmo == 0)
@@ -91,43 +141,61 @@ public class BotEntity : CharacterEntity
                             ServerChangeWeapon(selectWeaponIndex + 1);
                     }
                 }
-                else if (attackingActionId >= 0)
-                    attackingActionId = -1;
             }
-            else if (attackingActionId >= 0)
-                attackingActionId = -1;
-            rotatePosition = enemy.TempTransform.position;
         }
-        else if (attackingActionId >= 0)
-            attackingActionId = -1;
+
+        // Dashing
+        if (Time.unscaledTime - dashingTime >= randomDashDuration && !isDashing)
+        {
+            randomDashDuration = dashDuration + Random.Range(randomDashDurationMin, randomDashDurationMax);
+            isDashing = true;
+        }
 
         // Gets a vector that points from the player's position to the target's.
         if (!IsReachedTargetPosition())
-            Move((targetPosition - TempTransform.position).normalized);
+            Move((targetPosition - CacheTransform.position).normalized);
+
         if (IsReachedTargetPosition())
         {
-            targetPosition = TempTransform.position + (TempTransform.forward * ReachedTargetDistance / 2f);
-            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+            targetPosition = CacheTransform.position + (CacheTransform.forward * ReachedTargetDistance / 2f);
+            CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
         }
         // Rotate to target
-        var rotateHeading = rotatePosition - TempTransform.position;
+        var rotateHeading = rotatePosition - CacheTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
-        TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
+        CacheTransform.rotation = Quaternion.Lerp(CacheTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
+        UpdateStatPoint();
+    }
+
+    private void UpdateStatPoint()
+    {
+        if (statPoint <= 0)
+            return;
+        var dict = new Dictionary<CharacterAttributes, int>();
+        var list = GameplayManager.Singleton.attributes.Values.ToList();
+        foreach (var entry in list)
+        {
+            dict.Add(entry, entry.randomWeight);
+        }
+        CmdAddAttribute(WeightedRandomizer.From(dict).TakeOne().name);
     }
 
     private bool IsReachedTargetPosition()
     {
-        return Vector3.Distance(targetPosition, TempTransform.position) < ReachedTargetDistance;
+        if (enemy != null)
+            return Vector3.Distance(targetPosition, CacheTransform.position) < Mathf.Min(enemy.CacheCollider.bounds.size.x, enemy.CacheCollider.bounds.size.z);
+        return Vector3.Distance(targetPosition, CacheTransform.position) < ReachedTargetDistance;
     }
 
     private bool FindEnemy(out CharacterEntity enemy)
     {
         enemy = null;
-        var colliders = Physics.OverlapSphere(TempTransform.position, detectEnemyDistance);
+        var gameplayManager = GameplayManager.Singleton;
+        var colliders = Physics.OverlapSphere(CacheTransform.position, detectEnemyDistance);
         foreach (var collider in colliders)
         {
             var character = collider.GetComponent<CharacterEntity>();
-            if (character != null && character != this && character.Hp > 0)
+            if (character != null && character != this && character.Hp > 0 && gameplayManager.CanReceiveDamage(character, this))
             {
                 enemy = character;
                 return true;
@@ -139,8 +207,11 @@ public class BotEntity : CharacterEntity
     protected override void OnCollisionStay(Collision collision)
     {
         base.OnCollisionStay(collision);
-        if (collision.collider.tag == "Wall")
-            isWallHit = true;
+        if (collision.collider.CompareTag("Wall"))
+        {
+            // Find another position to move in next frame
+            lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
+        }
     }
 
     public override void OnSpawn()
