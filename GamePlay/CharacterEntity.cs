@@ -811,16 +811,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [Server]
-    public void ReceiveDamage(CharacterEntity attacker, int damage)
+    public virtual bool ReceiveDamage(CharacterEntity attacker, int damage)
     {
-        var gameplayManager = GameplayManager.Singleton;
         if (Hp <= 0 || isInvincible)
-            return;
+            return false;
+
+        var gameplayManager = GameplayManager.Singleton;
+        if (!gameplayManager.CanReceiveDamage(this, attacker))
+            return false;
 
         RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
-        if (!gameplayManager.CanReceiveDamage(this, attacker))
-            return;
-
         int reduceHp = damage;
         reduceHp -= Mathf.CeilToInt(damage * TotalReduceDamageRate);
         if (Armor > 0)
@@ -862,6 +862,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 ++dieCount;
             }
         }
+        return true;
     }
 
     [Server]
