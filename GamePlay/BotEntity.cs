@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class BotEntity : CharacterEntity
 {
@@ -19,6 +20,7 @@ public class BotEntity : CharacterEntity
     public float randomMoveDistance = 5f;
     public float detectEnemyDistance = 2f;
     public float turnSpeed = 5f;
+    public bool useNavMesh;
     public Characteristic characteristic;
     public CharacterStats startAddStats;
     [HideInInspector, System.NonSerialized]
@@ -27,12 +29,14 @@ public class BotEntity : CharacterEntity
     public Vector3 fixRandomMoveAroundPoint;
     [HideInInspector, System.NonSerialized]
     public float fixRandomMoveAroundDistance;
-    private Vector3 targetPosition;
     private float lastUpdateMovementTime;
     private float lastAttackTime;
     private float randomDashDuration;
     private CharacterEntity enemy;
     private Vector3 dashDirection;
+    private Queue<Vector3> navPaths;
+    private Vector3 targetPosition;
+    private Vector3 lookingPosition;
 
     public override void OnStartServer()
     {
@@ -75,28 +79,28 @@ public class BotEntity : CharacterEntity
             lastUpdateMovementTime = Time.unscaledTime;
             if (enemy != null)
             {
-                targetPosition = new Vector3(
+                GetMovePaths(new Vector3(
                     enemy.CacheTransform.position.x + Random.Range(-1f, 1f) * detectEnemyDistance,
                     0,
-                    enemy.CacheTransform.position.z + Random.Range(-1f, 1f) * detectEnemyDistance);
+                    enemy.CacheTransform.position.z + Random.Range(-1f, 1f) * detectEnemyDistance));
             }
             else if (isFixRandomMoveAroundPoint)
             {
-                targetPosition = new Vector3(
+                GetMovePaths(new Vector3(
                     fixRandomMoveAroundPoint.x + Random.Range(-1f, 1f) * fixRandomMoveAroundDistance,
                     0,
-                    fixRandomMoveAroundPoint.z + Random.Range(-1f, 1f) * fixRandomMoveAroundDistance);
+                    fixRandomMoveAroundPoint.z + Random.Range(-1f, 1f) * fixRandomMoveAroundDistance));
             }
             else
             {
-                targetPosition = new Vector3(
+                GetMovePaths(new Vector3(
                     CacheTransform.position.x + Random.Range(-1f, 1f) * randomMoveDistance,
                     0,
-                    CacheTransform.position.z + Random.Range(-1f, 1f) * randomMoveDistance);
+                    CacheTransform.position.z + Random.Range(-1f, 1f) * randomMoveDistance));
             }
         }
 
-        var rotatePosition = targetPosition;
+        lookingPosition = targetPosition;
         if (enemy == null || enemy.IsDead || Time.unscaledTime - lastAttackTime >= forgetEnemyDuration)
         {
             enemy = null;
@@ -115,7 +119,7 @@ public class BotEntity : CharacterEntity
         else
         {
             // Set target rotation to enemy position
-            rotatePosition = enemy.CacheTransform.position;
+            lookingPosition = enemy.CacheTransform.position;
         }
 
         attackingActionId = -1;
@@ -166,19 +170,47 @@ public class BotEntity : CharacterEntity
         }
 
         // Gets a vector that points from the player's position to the target's.
-        if (!IsReachedTargetPosition())
+        isReachedTarget = IsReachedTargetPosition();
+        if (!isReachedTarget)
             Move(isDashing ? dashDirection : (targetPosition - CacheTransform.position).normalized);
 
-        if (IsReachedTargetPosition())
+        if (isReachedTarget)
         {
             targetPosition = CacheTransform.position + (CacheTransform.forward * ReachedTargetDistance / 2f);
             CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
+            if (navPaths.Count > 0)
+                targetPosition = navPaths.Dequeue();
         }
         // Rotate to target
-        var rotateHeading = rotatePosition - CacheTransform.position;
+        var rotateHeading = lookingPosition - CacheTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         CacheTransform.rotation = Quaternion.Lerp(CacheTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
         UpdateStatPoint();
+    }
+
+    private void GetMovePaths(Vector3 position)
+    {
+        if (useNavMesh)
+        {
+            NavMeshPath navPath = new NavMeshPath();
+            NavMeshHit navHit;
+            if (NavMesh.SamplePosition(position, out navHit, 5f, NavMesh.AllAreas) &&
+                NavMesh.CalculatePath(CacheTransform.position, navHit.position, NavMesh.AllAreas, navPath))
+            {
+                navPaths = new Queue<Vector3>(navPath.corners);
+                // Dequeue first path it's not require for future movement
+                navPaths.Dequeue();
+            }
+        }
+        else
+        {
+            // If not use nav mesh, just move to position by direction
+            navPaths = new Queue<Vector3>();
+            navPaths.Enqueue(position);
+        }
+        // Set first target position immediately
+        if (navPaths.Count > 0)
+            targetPosition = navPaths.Dequeue();
     }
 
     private void UpdateStatPoint()
@@ -221,6 +253,9 @@ public class BotEntity : CharacterEntity
     protected override void OnCollisionStay(Collision collision)
     {
         base.OnCollisionStay(collision);
+        if (useNavMesh)
+            return;
+
         if (collision.collider.CompareTag("Wall"))
         {
             // Find another position to move in next frame
