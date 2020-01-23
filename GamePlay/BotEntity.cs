@@ -20,7 +20,6 @@ public class BotEntity : CharacterEntity
     public float randomMoveDistance = 5f;
     public float detectEnemyDistance = 2f;
     public float turnSpeed = 5f;
-    public bool useNavMesh;
     public Characteristic characteristic;
     public CharacterStats startAddStats;
     [HideInInspector, System.NonSerialized]
@@ -190,27 +189,23 @@ public class BotEntity : CharacterEntity
 
     private void GetMovePaths(Vector3 position)
     {
-        if (useNavMesh)
+        NavMeshPath navPath = new NavMeshPath();
+        NavMeshHit navHit;
+        if (NavMesh.SamplePosition(position, out navHit, 5f, NavMesh.AllAreas) &&
+            NavMesh.CalculatePath(CacheTransform.position, navHit.position, NavMesh.AllAreas, navPath))
         {
-            NavMeshPath navPath = new NavMeshPath();
-            NavMeshHit navHit;
-            if (NavMesh.SamplePosition(position, out navHit, 5f, NavMesh.AllAreas) &&
-                NavMesh.CalculatePath(CacheTransform.position, navHit.position, NavMesh.AllAreas, navPath))
-            {
-                navPaths = new Queue<Vector3>(navPath.corners);
-                // Dequeue first path it's not require for future movement
-                navPaths.Dequeue();
-            }
+            navPaths = new Queue<Vector3>(navPath.corners);
+            // Dequeue first path it's not require for future movement
+            navPaths.Dequeue();
         }
-        else
-        {
-            // If not use nav mesh, just move to position by direction
+        // Initial queue
+        if (navPaths == null)
             navPaths = new Queue<Vector3>();
-            navPaths.Enqueue(position);
-        }
         // Set first target position immediately
         if (navPaths.Count > 0)
             targetPosition = navPaths.Dequeue();
+        else
+            targetPosition = position;
     }
 
     private void UpdateStatPoint()
@@ -253,8 +248,6 @@ public class BotEntity : CharacterEntity
     protected override void OnCollisionStay(Collision collision)
     {
         base.OnCollisionStay(collision);
-        if (useNavMesh)
-            return;
 
         if (collision.collider.CompareTag("Wall"))
         {
