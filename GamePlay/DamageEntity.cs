@@ -7,6 +7,7 @@ using UnityEngine.Networking;
 public class DamageEntity : MonoBehaviour
 {
     public EffectEntity spawnEffectPrefab;
+    public EffectEntity muzzleEffectPrefab;
     public EffectEntity explodeEffectPrefab;
     public EffectEntity hitEffectPrefab;
     public AudioClip[] hitFx;

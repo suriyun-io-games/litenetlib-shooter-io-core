@@ -12,6 +12,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
     public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public const byte RPC_EFFECT_TRAP_HIT = 2;
+    public const byte RPC_EFFECT_MUZZLE_SPAWN_R = 3;
+    public const byte RPC_EFFECT_MUZZLE_SPAWN_L = 4;
     public const int MAX_EQUIPPABLE_WEAPON_AMOUNT = 10;
     public Transform damageLaunchTransform;
     public Transform effectTransform;
@@ -1281,6 +1283,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
                             break;
                         case RPC_EFFECT_DAMAGE_HIT:
                             EffectEntity.PlayEffect(damagePrefab.hitEffectPrefab, effectTransform);
+                            break;
+                        case RPC_EFFECT_MUZZLE_SPAWN_R:
+                            Transform muzzleRTransform;
+                            GetDamageLaunchTransform(false, out muzzleRTransform);
+                            EffectEntity.PlayEffect(damagePrefab.muzzleEffectPrefab, muzzleRTransform);
+                            break;
+                        case RPC_EFFECT_MUZZLE_SPAWN_L:
+                            Transform muzzleLTransform;
+                            GetDamageLaunchTransform(true, out muzzleLTransform);
+                            EffectEntity.PlayEffect(damagePrefab.muzzleEffectPrefab, muzzleLTransform);
                             break;
                     }
                 }

@@ -72,7 +72,20 @@ public class WeaponData : ItemData
             }
         }
 
-        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);
+        if (damagePrefab.spawnEffectPrefab)
+        {
+            // Instantiate spawn effect at clients
+            attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);
+        }
+
+        if (damagePrefab.muzzleEffectPrefab)
+        {
+            // Instantiate muzzle effect at clients
+            if (!isLeftHandWeapon)
+                attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_MUZZLE_SPAWN_R);
+            else
+                attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_MUZZLE_SPAWN_L);
+        }
     }
 
     public void SetupAnimations()
