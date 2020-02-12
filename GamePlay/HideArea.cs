@@ -15,7 +15,7 @@ public class HideArea : MonoBehaviour
     }
 
     public RendererAndMaterials[] rendererAndMaterials;
-    
+
     private CharacterEntity tempCharacter;
     private bool isMineCharacterInside;
     private readonly HashSet<CharacterEntity> insideCharacters = new HashSet<CharacterEntity>();
@@ -52,7 +52,7 @@ public class HideArea : MonoBehaviour
         }
         foreach (var insideCharacter in insideCharacters)
         {
-            if (insideCharacter == BaseNetworkGameCharacter.Local) continue;
+            if (!insideCharacter || insideCharacter == BaseNetworkGameCharacter.Local) continue;
             insideCharacter.IsHidding = !isMineCharacterInside;
         }
     }
@@ -77,7 +77,7 @@ public class HideArea : MonoBehaviour
         }
         foreach (var insideCharacter in insideCharacters)
         {
-            if (insideCharacter == BaseNetworkGameCharacter.Local) continue;
+            if (!insideCharacter || insideCharacter == BaseNetworkGameCharacter.Local) continue;
             insideCharacter.IsHidding = !isMineCharacterInside;
         }
         tempCharacter.IsHidding = false;
