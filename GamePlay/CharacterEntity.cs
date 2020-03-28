@@ -1279,7 +1279,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected void NetFuncPickup(uint netId)
     {
         LiteNetLibIdentity go;
-        if (Manager.Assets.TryGetSpawnedObject(netId, out go))
+        if (!Manager.Assets.TryGetSpawnedObject(netId, out go))
             return;
         var pickup = go.GetComponent<PickupEntity>();
         if (pickup == null)
