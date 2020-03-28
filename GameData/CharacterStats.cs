@@ -1,9 +1,10 @@
-﻿using System.Collections;
+﻿using LiteNetLib.Utils;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-public struct CharacterStats
+public struct CharacterStats : INetSerializable
 {
     public int addMaxHp;
     public int addMaxArmor;
@@ -16,6 +17,36 @@ public struct CharacterStats
     public float addHpRecoveryRate;
     public float addArmorRecoveryRate;
     public float addDamageRateLeechHp;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        addMaxHp = reader.GetPackedInt();
+        addMaxArmor = reader.GetPackedInt();
+        addMoveSpeed = reader.GetPackedInt();
+        addWeaponDamageRate = reader.GetFloat();
+        addReduceDamageRate = reader.GetFloat();
+        addArmorReduceDamage = reader.GetFloat();
+        addExpRate = reader.GetFloat();
+        addScoreRate = reader.GetFloat();
+        addHpRecoveryRate = reader.GetFloat();
+        addArmorRecoveryRate = reader.GetFloat();
+        addDamageRateLeechHp = reader.GetFloat();
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.PutPackedInt(addMaxHp);
+        writer.PutPackedInt(addMaxArmor);
+        writer.PutPackedInt(addMoveSpeed);
+        writer.Put(addWeaponDamageRate);
+        writer.Put(addReduceDamageRate);
+        writer.Put(addArmorReduceDamage);
+        writer.Put(addExpRate);
+        writer.Put(addScoreRate);
+        writer.Put(addHpRecoveryRate);
+        writer.Put(addArmorRecoveryRate);
+        writer.Put(addDamageRateLeechHp);
+    }
 
     public static CharacterStats operator +(CharacterStats a, CharacterStats b)
     {
