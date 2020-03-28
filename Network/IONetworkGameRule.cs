@@ -105,9 +105,9 @@ public class IONetworkGameRule : BaseNetworkGameRule
         return true;
     }
 
-    public override void OnStartServer(BaseNetworkGameManager manager)
+    public override void OnStartServer()
     {
-        base.OnStartServer(manager);
+        base.OnStartServer();
 
         if (overrideCharacterPrefab != null)
             networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
