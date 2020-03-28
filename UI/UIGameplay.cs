@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 public class UIGameplay : MonoBehaviour
 {
@@ -49,13 +49,13 @@ public class UIGameplay : MonoBehaviour
 
     private void Update()
     {
-        var isNetworkActive = NetworkManager.singleton.isNetworkActive;
+        var isNetworkActive = SimpleLanNetworkManager.Singleton.IsNetworkActive;
         if (isNetworkActiveDirty != isNetworkActive)
         {
             foreach (var hidingIfDedicateUi in hidingIfDedicateServerUis)
             {
                 if (hidingIfDedicateUi != null)
-                    hidingIfDedicateUi.SetActive(!NetworkServer.active || NetworkServer.localClientActive);
+                    hidingIfDedicateUi.SetActive(!SimpleLanNetworkManager.Singleton.IsServer || SimpleLanNetworkManager.Singleton.IsClient);
             }
             isNetworkActiveDirty = isNetworkActive;
         }

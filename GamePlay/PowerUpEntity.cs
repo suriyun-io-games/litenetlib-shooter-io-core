@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
-public class PowerUpEntity : NetworkBehaviour
+public class PowerUpEntity : LiteNetLibBehaviour
 {
     public const float DestroyDelay = 1f;
     // We're going to respawn this power up so I decide to keep its prefab name to spawning when character triggered
@@ -39,13 +39,13 @@ public class PowerUpEntity : NetworkBehaviour
         {
             isDead = true;
             EffectEntity.PlayEffect(powerUpEffect, character.effectTransform);
-            if (isServer)
+            if (IsServer)
             {
                 character.Hp += Mathf.CeilToInt(hp * character.TotalHpRecoveryRate);
                 character.Armor += Mathf.CeilToInt(armor * character.TotalArmorRecoveryRate);
                 character.Exp += Mathf.CeilToInt(exp * character.TotalExpRate);
             }
-            if (character.isLocalPlayer && !(character is BotEntity))
+            if (character.IsOwnerClient && !(character is BotEntity))
             {
                 foreach (var currency in currencies)
                 {
@@ -65,9 +65,9 @@ public class PowerUpEntity : NetworkBehaviour
         }
         yield return new WaitForSeconds(DestroyDelay);
         // Destroy this on all clients
-        if (isServer)
+        if (IsServer)
         {
-            NetworkServer.Destroy(gameObject);
+            NetworkDestroy();
             GameplayManager.Singleton.SpawnPowerUp(prefabName);
         }
     }

@@ -1,7 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
+using LiteNetLib.Utils;
 
 [RequireComponent(typeof(GameNetworkDiscovery))]
 public class GameNetworkManager : BaseNetworkGameManager
@@ -42,56 +43,29 @@ public class GameNetworkManager : BaseNetworkGameManager
         return msg;
     }
 
-    public override void OnClientConnect(NetworkConnection conn)
+    protected override void RegisterClientMessages()
     {
-        if (!clientLoadedScene)
-        {
-            // Ready/AddPlayer is usually triggered by a scene load completing. if no scene was loaded, then Ready/AddPlayer it here instead.
-            ClientScene.Ready(conn);
-            ClientScene.AddPlayer(conn, 0, MakeJoinMessage());
-        }
+        base.RegisterClientMessages();
+        RegisterClientMessage(new OpMsgCharacterAttack().OpId, ReadMsgCharacterAttack);
     }
 
-    public override void OnClientSceneChanged(NetworkConnection conn)
+    protected void ReadMsgCharacterAttack(LiteNetLibMessageHandler messageHandler)
     {
-        // always become ready.
-        ClientScene.Ready(conn);
-
-        bool addPlayer = (ClientScene.localPlayers.Count == 0);
-        bool foundPlayer = false;
-        for (int i = 0; i < ClientScene.localPlayers.Count; i++)
-        {
-            if (ClientScene.localPlayers[i].gameObject != null)
-            {
-                foundPlayer = true;
-                break;
-            }
-        }
-        // there are players, but their game objects have all been deleted
-        if (!foundPlayer)
-            addPlayer = true;
-
-        if (addPlayer)
-            ClientScene.AddPlayer(conn, 0, MakeJoinMessage());
-    }
-
-    public override void OnStartClient(NetworkClient client)
-    {
-        base.OnStartClient(client);
-        client.RegisterHandler(new OpMsgCharacterAttack().OpId, ReadMsgCharacterAttack);
-    }
-
-    protected void ReadMsgCharacterAttack(NetworkMessage netMsg)
-    {
-        var msg = netMsg.ReadMessage<OpMsgCharacterAttack>();
+        var msg = messageHandler.ReadMessage<OpMsgCharacterAttack>();
         // Instantiates damage entities on clients only
-        if (!NetworkServer.active)
+        if (!IsServer)
             DamageEntity.InstantiateNewEntity(msg);
     }
 
-    protected override BaseNetworkGameCharacter NewCharacter(NetworkReader extraMessageReader)
+    protected override void PrepareCharacter(NetDataWriter writer)
     {
-        var joinMessage = extraMessageReader.ReadMessage<JoinMessage>();
+        MakeJoinMessage().Serialize(writer);
+    }
+
+    protected override BaseNetworkGameCharacter NewCharacter(NetDataReader reader)
+    {
+        var joinMessage = new JoinMessage();
+        joinMessage.Deserialize(reader);
         // Get character prefab
         CharacterEntity characterPrefab = GameInstance.Singleton.characterPrefab;
         if (gameRule != null && gameRule is IONetworkGameRule)
@@ -129,7 +103,7 @@ public class GameNetworkManager : BaseNetworkGameManager
         foreach (var score in scores)
         {
             ++rank;
-            if (BaseNetworkGameCharacter.Local != null && score.netId.Equals(BaseNetworkGameCharacter.Local.netId))
+            if (BaseNetworkGameCharacter.Local != null && score.netId.Equals(BaseNetworkGameCharacter.Local.ObjectId))
             {
                 (BaseNetworkGameCharacter.Local as CharacterEntity).rank = rank;
                 break;
@@ -148,7 +122,7 @@ public class GameNetworkManager : BaseNetworkGameManager
     }
 
     [System.Serializable]
-    public class JoinMessage : MessageBase
+    public class JoinMessage : INetSerializable
     {
         public string playerName;
         public int selectHead;
@@ -156,5 +130,25 @@ public class GameNetworkManager : BaseNetworkGameManager
         public int[] selectWeapons;
         public int[] selectCustomEquipments;
         public string extra;
+
+        public void Deserialize(NetDataReader reader)
+        {
+            playerName = reader.GetString();
+            selectHead = reader.GetInt();
+            selectCharacter = reader.GetInt();
+            selectWeapons = reader.GetIntArray();
+            selectCustomEquipments = reader.GetIntArray();
+            extra = reader.GetString();
+        }
+
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(playerName);
+            writer.Put(selectHead);
+            writer.Put(selectCharacter);
+            writer.PutArray(selectWeapons);
+            writer.PutArray(selectCustomEquipments);
+            writer.Put(extra);
+        }
     }
 }

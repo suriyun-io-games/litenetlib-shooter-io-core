@@ -57,10 +57,10 @@ public class BotEntity : CharacterEntity
 
     protected override void UpdateMovements()
     {
-        if (!isServer)
+        if (!IsServer)
             return;
 
-        if (GameNetworkManager.Singleton.numPlayers <= 0)
+        if (GameNetworkManager.Singleton.PlayersCount <= 0)
         {
             CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
             attackingActionId = -1;

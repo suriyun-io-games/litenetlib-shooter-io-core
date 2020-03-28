@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
-public class PickupEntity : NetworkBehaviour
+public class PickupEntity : LiteNetLibBehaviour
 {
     public enum PickupType
     {
@@ -57,7 +57,7 @@ public class PickupEntity : NetworkBehaviour
         var character = other.GetComponent<CharacterEntity>();
         if (character != null && character.Hp > 0)
         {
-            if (isServer)
+            if (IsServer)
             {
                 switch (type)
                 {
@@ -71,7 +71,7 @@ public class PickupEntity : NetworkBehaviour
                 }
             }
 
-            if (!gameplayManager.autoPickup && character.isLocalPlayer && type != PickupType.Ammo)
+            if (!gameplayManager.autoPickup && character.IsOwnerClient && type != PickupType.Ammo)
                     character.PickableEntities.Add(this);
         }
     }
@@ -88,7 +88,7 @@ public class PickupEntity : NetworkBehaviour
         var character = other.GetComponent<CharacterEntity>();
         if (character != null && character.Hp > 0)
         {
-            if (!gameplayManager.autoPickup && character.isLocalPlayer)
+            if (!gameplayManager.autoPickup && character.IsOwnerClient)
                     character.PickableEntities.Remove(this);
         }
     }
@@ -116,7 +116,7 @@ public class PickupEntity : NetworkBehaviour
         if (isPickedup)
         {
             isDead = true;
-            NetworkServer.Destroy(gameObject);
+            NetworkDestroy();
             if (gameplayManager.respawnPickedupItems)
                 gameplayManager.SpawnPickup(prefabName);
         }

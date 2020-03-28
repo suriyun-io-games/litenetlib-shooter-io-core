@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 public class IONetworkGameRule : BaseNetworkGameRule
 {
@@ -109,20 +109,20 @@ public class IONetworkGameRule : BaseNetworkGameRule
     {
         base.OnStartServer(manager);
 
-        if (overrideCharacterPrefab != null && !ClientScene.prefabs.ContainsValue(overrideCharacterPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideCharacterPrefab.gameObject);
+        if (overrideCharacterPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
 
-        if (overrideBotPrefab != null && !ClientScene.prefabs.ContainsValue(overrideBotPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideBotPrefab.gameObject);
+        if (overrideBotPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
     }
 
-    public override void InitialClientObjects(NetworkClient client)
+    public override void InitialClientObjects(LiteNetLibClient client)
     {
-        if (overrideCharacterPrefab != null && !ClientScene.prefabs.ContainsValue(overrideCharacterPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideCharacterPrefab.gameObject);
+        if (overrideCharacterPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
 
-        if (overrideBotPrefab != null && !ClientScene.prefabs.ContainsValue(overrideBotPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideBotPrefab.gameObject);
+        if (overrideBotPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
 
         var ui = FindObjectOfType<UIGameplay>();
         if (ui == null && uiGameplayPrefab != null)

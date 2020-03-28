@@ -1,11 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
+using LiteNetLib.Utils;
 
 public class OpMsgCharacterAttack : BaseOpMsg
 {
-    public override short OpId
+    public override ushort OpId
     {
         get
         {
@@ -17,7 +18,29 @@ public class OpMsgCharacterAttack : BaseOpMsg
     public bool isLeftHandWeapon;
     public Vector3 position;
     public Vector3 direction;
-    public NetworkInstanceId attackerNetId;
+    public uint attackerNetId;
     public float addRotationX;
     public float addRotationY;
+
+    public override void Deserialize(NetDataReader reader)
+    {
+        weaponId = reader.GetInt();
+        isLeftHandWeapon = reader.GetBool();
+        position = reader.GetVector3();
+        direction = reader.GetVector3();
+        attackerNetId = reader.GetPackedUInt();
+        addRotationX = reader.GetFloat();
+        addRotationY = reader.GetFloat();
+    }
+
+    public override void Serialize(NetDataWriter writer)
+    {
+        writer.Put(weaponId);
+        writer.Put(isLeftHandWeapon);
+        writer.Put(position);
+        writer.Put(direction);
+        writer.PutPackedUInt(attackerNetId);
+        writer.Put(addRotationX);
+        writer.Put(addRotationY);
+    }
 }

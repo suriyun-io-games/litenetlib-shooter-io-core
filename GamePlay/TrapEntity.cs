@@ -1,10 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 [RequireComponent(typeof(Rigidbody))]
-public class TrapEntity : NetworkBehaviour
+public class TrapEntity : LiteNetLibBehaviour
 {
     public const float ReachedTargetDistance = 0.1f;
     public float triggerableDuration = 2;
@@ -14,7 +14,7 @@ public class TrapEntity : NetworkBehaviour
     public float turnSpeed = 5f;
     public Transform[] moveWaypoints;
     public readonly List<Transform> MoveWaypoints = new List<Transform>();
-    public readonly Dictionary<NetworkInstanceId, float> TriggerredTime = new Dictionary<NetworkInstanceId, float>();
+    public readonly Dictionary<uint, float> TriggerredTime = new Dictionary<uint, float>();
     private Vector3 targetPosition;
     private int currentWaypoint;
     private bool isReversing;
@@ -57,7 +57,7 @@ public class TrapEntity : NetworkBehaviour
 
     private void Update()
     {
-        if (!isServer)
+        if (!IsServer)
             return;
 
         if (MoveWaypoints.Count <= 1)
@@ -102,20 +102,20 @@ public class TrapEntity : NetworkBehaviour
 
     private void OnTriggerStay(Collider other)
     {
-        if (!isServer)
+        if (!IsServer)
             return;
 
         var character = other.GetComponent<CharacterEntity>();
         if (character == null)
             return;
 
-        var characterNetId = character.netId;
+        var characterNetId = character.ObjectId;
         var time = Time.unscaledTime;
         if (TriggerredTime.ContainsKey(characterNetId) && time - TriggerredTime[characterNetId] < triggerableDuration)
             return;
 
         TriggerredTime[characterNetId] = time;
         character.Hp -= triggeredDamage;
-        character.RpcEffect(netId, CharacterEntity.RPC_EFFECT_TRAP_HIT);
+        character.RpcEffect(ObjectId, CharacterEntity.RPC_EFFECT_TRAP_HIT);
     }
 }

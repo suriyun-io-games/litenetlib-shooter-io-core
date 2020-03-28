@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 public class BattleRoyaleNetworkGameRule : IONetworkGameRule
 {
@@ -99,7 +99,7 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
             if (character == null)
                 continue;
             
-            NetworkServer.Spawn(character.gameObject);
+            networkManager.Assets.NetworkSpawn(character.gameObject);
             networkManager.RegisterCharacter(character);
         }
     }

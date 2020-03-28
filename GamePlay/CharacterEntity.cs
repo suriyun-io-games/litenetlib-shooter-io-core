@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using static LiteNetLibManager.LiteNetLibSyncList;
 
 [RequireComponent(typeof(Rigidbody))]
 public class CharacterEntity : BaseNetworkGameCharacter
@@ -35,14 +36,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public GameObject invincibleEffect;
     [Header("Online data")]
 
-    [SyncVar]
+    [SyncField]
     public int hp;
     public int Hp
     {
         get { return hp; }
         set
         {
-            if (!isServer)
+            if (!IsServer)
                 return;
 
             if (value <= 0)
@@ -50,8 +51,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 value = 0;
                 if (!isDead)
                 {
-                    if (connectionToClient != null)
-                        TargetDead(connectionToClient);
+                    TargetDead(ConnectionId);
                     deathTime = Time.unscaledTime;
                     isDead = true;
                     PickableEntities.Clear();
@@ -63,14 +63,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [SyncVar]
+    [SyncField]
     public int armor;
     public int Armor
     {
         get { return armor; }
         set
         {
-            if (!isServer)
+            if (!IsServer)
                 return;
 
             if (value <= 0)
@@ -82,14 +82,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [SyncVar]
+    [SyncField]
     public int exp;
     public virtual int Exp
     {
         get { return exp; }
         set
         {
-            if (!isServer)
+            if (!IsServer)
                 return;
 
             var gameplayManager = GameplayManager.Singleton;
@@ -110,37 +110,37 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [SyncVar]
+    [SyncField]
     public int level = 1;
 
-    [SyncVar]
+    [SyncField]
     public int statPoint;
 
-    [SyncVar]
+    [SyncField]
     public int watchAdsCount;
 
-    [SyncVar(hook = "OnCharacterChanged")]
+    [SyncField(hook = "OnCharacterChanged")]
     public int selectCharacter = 0;
 
-    [SyncVar(hook = "OnHeadChanged")]
+    [SyncField(hook = "OnHeadChanged")]
     public int selectHead = 0;
-    
+
     public SyncListInt selectWeapons = new SyncListInt();
     public SyncListInt selectCustomEquipments = new SyncListInt();
 
-    [SyncVar(hook = "OnWeaponChanged")]
+    [SyncField(hook = "OnWeaponChanged")]
     public int selectWeaponIndex = -1;
 
-    [SyncVar]
+    [SyncField]
     public bool isInvincible;
 
-    [SyncVar, Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
+    [SyncField, Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
     public int attackingActionId;
 
-    [SyncVar]
+    [SyncField]
     public CharacterStats addStats;
 
-    [SyncVar]
+    [SyncField]
     public string extra;
 
     [HideInInspector]
@@ -150,7 +150,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get { return hp <= 0; }
     }
-    
+
     public System.Action onDead;
     public readonly HashSet<PickupEntity> PickableEntities = new HashSet<PickupEntity>();
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
@@ -268,7 +268,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return total;
         }
     }
-    
+
     public virtual int TotalMoveSpeed
     {
         get
@@ -377,8 +377,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     private void Awake()
     {
-        selectWeapons.Callback = OnWeaponsChanged;
-        selectCustomEquipments.Callback = OnCustomEquipmentsChanged;
+        selectWeapons.onOperation = OnWeaponsChanged;
+        selectCustomEquipments.onOperation = OnCustomEquipmentsChanged;
         gameObject.layer = GameInstance.Singleton.characterLayer;
         CacheTransform = transform;
         CacheRigidbody = GetComponent<Rigidbody>();
@@ -396,27 +396,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
         deathTime = Time.unscaledTime;
     }
 
-    public override void OnStartClient()
-    {
-        if (!isServer)
-        {
-            OnHeadChanged(selectHead);
-            OnCharacterChanged(selectCharacter);
-            OnWeaponsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
-            OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
-            OnWeaponChanged(selectWeaponIndex);
-        }
-    }
-
     public override void OnStartServer()
     {
         for (var i = 0; i < MAX_EQUIPPABLE_WEAPON_AMOUNT; ++i)
             equippedWeapons.Add(EquippedWeapon.Empty);
-        OnHeadChanged(selectHead);
-        OnCharacterChanged(selectCharacter);
-        OnWeaponsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
-        OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
-        OnWeaponChanged(selectWeaponIndex);
         attackingActionId = -1;
     }
 
@@ -447,14 +430,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
         if (Hp <= 0)
         {
-            if (!isServer && isLocalPlayer && Time.unscaledTime - deathTime >= DISCONNECT_WHEN_NOT_RESPAWN_DURATION)
+            if (!IsServer && IsOwnerClient && Time.unscaledTime - deathTime >= DISCONNECT_WHEN_NOT_RESPAWN_DURATION)
                 GameNetworkManager.Singleton.StopHost();
 
-            if (isServer)
+            if (IsServer)
                 attackingActionId = -1;
         }
 
-        if (isServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
+        if (IsServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
             isInvincible = false;
         if (invincibleEffect != null)
             invincibleEffect.SetActive(isInvincible);
@@ -524,7 +507,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void UpdateInput()
     {
-        if (!isLocalPlayer || Hp <= 0)
+        if (!IsOwnerClient || Hp <= 0)
             return;
 
         bool canControl = true;
@@ -618,10 +601,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
             CacheRigidbody.AddForce(velocityChange, ForceMode.VelocityChange);
         }
     }
-    
+
     protected virtual void UpdateMovements()
     {
-        if (!isLocalPlayer || Hp <= 0)
+        if (!IsOwnerClient || Hp <= 0)
             return;
 
         var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
@@ -675,7 +658,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             CacheTransform.rotation = targetRotation;
         }
     }
-    
+
     public void GetDamageLaunchTransform(bool isLeftHandWeapon, out Transform launchTransform)
     {
         launchTransform = null;
@@ -685,7 +668,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected void Attack()
     {
-        if (isLocalPlayer)
+        if (IsOwnerClient)
         {
             // If attacking while reloading, determines that it is reload interrupting
             if (isReloading && FinishReloadTimeRate > 0.8f)
@@ -694,13 +677,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (isPlayingAttackAnim || isReloading || !CurrentEquippedWeapon.CanShoot())
             return;
 
-        if (attackingActionId < 0 && isLocalPlayer)
+        if (attackingActionId < 0 && IsOwnerClient)
             CmdAttack();
     }
 
     protected void StopAttack()
     {
-        if (attackingActionId >= 0 && isLocalPlayer)
+        if (attackingActionId >= 0 && IsOwnerClient)
             CmdStopAttack();
     }
 
@@ -708,15 +691,15 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         if (isPlayingAttackAnim || isReloading || !CurrentEquippedWeapon.CanReload())
             return;
-        if (isLocalPlayer)
+        if (IsOwnerClient)
             CmdReload();
     }
 
     IEnumerator AttackRoutine(int actionId)
     {
-        if (!isPlayingAttackAnim && 
-            !isReloading && 
-            CurrentEquippedWeapon.CanShoot() && 
+        if (!isPlayingAttackAnim &&
+            !isReloading &&
+            CurrentEquippedWeapon.CanShoot() &&
             Hp > 0 &&
             characterModel != null &&
             characterModel.TempAnimator != null)
@@ -742,7 +725,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 yield return new WaitForSeconds(launchDuration / speed);
 
                 // Launch damage entity on server only
-                if (isServer)
+                if (IsServer)
                 {
                     WeaponData.Launch(this, attackAnimation.isAnimationForLeftHandWeapon);
                     var equippedWeapon = CurrentEquippedWeapon;
@@ -759,7 +742,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
             }
             // If player still attacking, random new attacking action id
-            if (isServer && attackingActionId >= 0 && WeaponData != null)
+            if (IsServer && attackingActionId >= 0 && WeaponData != null)
                 attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
             yield return new WaitForEndOfFrame();
 
@@ -782,7 +765,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 if (WeaponData.clipOutFx != null && AudioManager.Singleton != null)
                     AudioSource.PlayClipAtPoint(WeaponData.clipOutFx, CacheTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
                 yield return new WaitForSeconds(reloadDuration);
-                if (isServer)
+                if (IsServer)
                 {
                     var equippedWeapon = CurrentEquippedWeapon;
                     equippedWeapon.Reload();
@@ -793,11 +776,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
                     AudioSource.PlayClipAtPoint(WeaponData.clipInFx, CacheTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
             }
             // If player still attacking, random new attacking action id
-            if (isServer && attackingActionId >= 0 && WeaponData != null)
+            if (IsServer && attackingActionId >= 0 && WeaponData != null)
                 attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
             yield return new WaitForEndOfFrame();
             isReloading = false;
-            if (isLocalPlayer)
+            if (IsOwnerClient)
             {
                 // If weapon is reload one ammo at a time (like as shotgun), automatically reload more bullets
                 // When there is no attack interrupt while reload
@@ -812,9 +795,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Server]
     public virtual bool ReceiveDamage(CharacterEntity attacker, int damage)
     {
+        if (!IsServer)
+            return false;
+
         if (Hp <= 0 || isInvincible)
             return false;
 
@@ -822,7 +807,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!gameplayManager.CanReceiveDamage(this, attacker))
             return false;
 
-        RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
+        RpcEffect(attacker.ObjectId, RPC_EFFECT_DAMAGE_HIT);
         int reduceHp = damage;
         reduceHp -= Mathf.CeilToInt(damage * TotalReduceDamageRate);
         if (Armor > 0)
@@ -867,30 +852,31 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return true;
     }
 
-    [Server]
     public void KilledTarget(CharacterEntity target)
     {
+        if (!IsServer)
+            return;
+
         var gameplayManager = GameplayManager.Singleton;
         var targetLevel = target.level;
         var maxLevel = gameplayManager.maxLevel;
         Exp += Mathf.CeilToInt(target.RewardExp * TotalExpRate);
         score += Mathf.CeilToInt(target.KillScore * TotalScoreRate);
-        if (connectionToClient != null)
+        foreach (var rewardCurrency in gameplayManager.rewardCurrencies)
         {
-            foreach (var rewardCurrency in gameplayManager.rewardCurrencies)
-            {
-                var currencyId = rewardCurrency.currencyId;
-                var amount = rewardCurrency.amount.Calculate(targetLevel, maxLevel);
-                TargetRewardCurrency(connectionToClient, currencyId, amount);
-            }
+            var currencyId = rewardCurrency.currencyId;
+            var amount = rewardCurrency.amount.Calculate(targetLevel, maxLevel);
+            TargetRewardCurrency(ConnectionId, currencyId, amount);
         }
         ++killCount;
         GameNetworkManager.Singleton.SendKillNotify(playerName, target.playerName, WeaponData == null ? string.Empty : WeaponData.GetId());
     }
 
-    [Server]
     public void Heal(int amount)
     {
+        if (!IsServer)
+            return;
+
         if (Hp <= 0)
             return;
 
@@ -904,9 +890,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return WeaponData.damagePrefab.GetAttackRange();
     }
 
-    protected virtual void OnCharacterChanged(int value)
+    protected virtual void OnCharacterChanged(bool isInit, int value)
     {
-        selectCharacter = value;
         if (characterModel != null)
             Destroy(characterModel.gameObject);
         characterData = GameInstance.GetCharacter(value);
@@ -932,18 +917,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnHeadChanged(int value)
+    protected virtual void OnHeadChanged(bool isInit, int value)
     {
-        selectHead = value;
         headData = GameInstance.GetHead(value);
         if (characterModel != null && headData != null)
             characterModel.SetHeadModel(headData.modelObject);
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnWeaponChanged(int value)
+    protected virtual void OnWeaponChanged(bool isInit, int value)
     {
-        selectWeaponIndex = value;
         if (selectWeaponIndex < 0 || selectWeaponIndex >= equippedWeapons.Count)
             return;
         if (characterModel != null && WeaponData != null)
@@ -951,10 +934,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnWeaponsChanged(SyncList<int>.Operation op, int itemIndex)
+    protected virtual void OnWeaponsChanged(Operation op, int itemIndex)
     {
         // Changes weapon list, equip first weapon equipped position
-        if (isServer)
+        if (IsServer)
         {
             var minEquipPos = int.MaxValue;
             for (var i = 0; i < selectWeapons.Count; ++i)
@@ -981,7 +964,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    protected virtual void OnCustomEquipmentsChanged(SyncList<int>.Operation op, int itemIndex)
+    protected virtual void OnCustomEquipmentsChanged(Operation op, int itemIndex)
     {
         if (characterModel != null)
             characterModel.ClearCustomModels();
@@ -1034,16 +1017,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public virtual void OnSpawn() { }
 
-    [Server]
     public void ServerInvincible()
     {
+        if (!IsServer)
+            return;
         invincibleTime = Time.unscaledTime;
         isInvincible = true;
     }
 
-    [Server]
     public void ServerSpawn(bool isWatchedAds)
     {
+        if (!IsServer)
+            return;
         if (Respawn(isWatchedAds))
         {
             var gameplayManager = GameplayManager.Singleton;
@@ -1051,22 +1036,23 @@ public class CharacterEntity : BaseNetworkGameCharacter
             OnSpawn();
             var position = GetSpawnPosition();
             CacheTransform.position = position;
-            if (connectionToClient != null)
-                TargetSpawn(connectionToClient, position);
+            TargetSpawn(ConnectionId, position);
             ServerRevive();
         }
     }
 
-    [Server]
     public void ServerRespawn(bool isWatchedAds)
     {
+        if (!IsServer)
+            return;
         if (CanRespawn(isWatchedAds))
             ServerSpawn(isWatchedAds);
     }
 
-    [Server]
     public void ServerRevive()
     {
+        if (!IsServer)
+            return;
         for (var i = 0; i < equippedWeapons.Count; ++i)
         {
             var equippedWeapon = equippedWeapons[i];
@@ -1076,7 +1062,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             equippedWeapons.Dirty(i);
         }
         selectWeaponIndex = defaultWeaponIndex;
-        OnWeaponChanged(selectWeaponIndex);
+        OnWeaponChanged(false, selectWeaponIndex);
         RpcWeaponChanged(selectWeaponIndex);
 
         isPlayingAttackAnim = false;
@@ -1085,9 +1071,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
         Hp = TotalHp;
     }
 
-    [Server]
     public void ServerReload()
     {
+        if (!IsServer)
+            return;
         if (WeaponData != null)
         {
             // Start reload routine at server to reload ammo
@@ -1097,9 +1084,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Server]
     public void ServerChangeWeapon(int index)
     {
+        if (!IsServer)
+            return;
         var gameInstance = GameInstance.Singleton;
         if (index >= 0 && index < MAX_EQUIPPABLE_WEAPON_AMOUNT && !equippedWeapons[index].IsEmpty())
         {
@@ -1111,9 +1099,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Server]
     public bool ServerChangeSelectWeapon(WeaponData weaponData, int ammoAmount)
     {
+        if (!IsServer)
+            return false;
         if (weaponData == null || string.IsNullOrEmpty(weaponData.GetId()) || weaponData.equipPosition < 0 || weaponData.equipPosition >= equippedWeapons.Count)
             return false;
         var equipPosition = weaponData.equipPosition;
@@ -1130,16 +1119,17 @@ public class CharacterEntity : BaseNetworkGameCharacter
             // Trigger change weapon
             if (selectWeaponIndex == equipPosition)
             {
-                OnWeaponChanged(selectWeaponIndex);
+                OnWeaponChanged(false, selectWeaponIndex);
                 RpcWeaponChanged(selectWeaponIndex);
             }
         }
         return updated;
     }
 
-    [Server]
     public bool ServerFillWeaponAmmo(WeaponData weaponData, int ammoAmount)
     {
+        if (!IsServer)
+            return false;
         if (weaponData == null || weaponData.equipPosition < 0 || weaponData.equipPosition >= equippedWeapons.Count)
             return false;
         var equipPosition = weaponData.equipPosition;
@@ -1157,8 +1147,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return updated;
     }
 
-    [Command]
     public void CmdReady()
+    {
+        CallNetFunction(NetFuncReady, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void NetFuncReady()
     {
         if (!isReady)
         {
@@ -1167,14 +1162,24 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Command]
     public void CmdRespawn(bool isWatchedAds)
+    {
+        CallNetFunction(NetFuncRespawn, FunctionReceivers.Server, isWatchedAds);
+    }
+
+    [NetFunction]
+    protected void NetFuncRespawn(bool isWatchedAds)
     {
         ServerRespawn(isWatchedAds);
     }
 
-    [Command]
     public void CmdAttack()
+    {
+        CallNetFunction(NetFuncAttack, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void NetFuncAttack()
     {
         if (WeaponData != null)
             attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
@@ -1182,20 +1187,35 @@ public class CharacterEntity : BaseNetworkGameCharacter
             attackingActionId = -1;
     }
 
-    [Command]
     public void CmdStopAttack()
+    {
+        CallNetFunction(NetFuncStopAttack, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void NetFuncStopAttack()
     {
         attackingActionId = -1;
     }
 
-    [Command]
     public void CmdReload()
+    {
+        CallNetFunction(NetFuncReload, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void NetFuncReload()
     {
         ServerReload();
     }
 
-    [Command]
     public void CmdAddAttribute(string name)
+    {
+        CallNetFunction(NetFuncAddAttribute, FunctionReceivers.Server, name);
+    }
+
+    [NetFunction]
+    protected void NetFuncAddAttribute(string name)
     {
         if (statPoint > 0)
         {
@@ -1209,24 +1229,39 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Command]
     public void CmdChangeWeapon(int index)
+    {
+        CallNetFunction(NetFuncChangeWeapon, FunctionReceivers.Server, index);
+    }
+
+    [NetFunction]
+    protected void NetFuncChangeWeapon(int index)
     {
         ServerChangeWeapon(index);
     }
 
-    [Command]
     public void CmdDash()
+    {
+        CallNetFunction(NetFuncDash, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void NetFuncDash()
     {
         // Play dash animation on other clients
         RpcDash();
     }
 
-    [Command]
-    public void CmdPickup(NetworkInstanceId netId)
+    public void CmdPickup(uint netId)
     {
-        var go = NetworkServer.FindLocalObject(netId);
-        if (go == null)
+        CallNetFunction(NetFuncPickup, FunctionReceivers.Server, netId);
+    }
+
+    [NetFunction]
+    protected void NetFuncPickup(uint netId)
+    {
+        LiteNetLibIdentity go;
+        if (Manager.Assets.TryGetSpawnedObject(netId, out go))
             return;
         var pickup = go.GetComponent<PickupEntity>();
         if (pickup == null)
@@ -1234,39 +1269,64 @@ public class CharacterEntity : BaseNetworkGameCharacter
         pickup.Pickup(this);
     }
 
-    [ClientRpc]
     public void RpcReload()
     {
-        if (!isServer)
+        CallNetFunction(NetFuncRpcReload, FunctionReceivers.All);
+    }
+
+    [NetFunction]
+    protected void NetFuncRpcReload()
+    {
+        if (!IsServer)
             reloadRoutine = StartCoroutine(ReloadRoutine());
     }
 
-    [ClientRpc]
     public void RpcInterruptAttack()
     {
-        if (!isServer)
+        CallNetFunction(NetFuncInterruptAttack, FunctionReceivers.All);
+    }
+
+    [NetFunction]
+    protected void NetFuncInterruptAttack()
+    {
+        if (!IsServer)
             InterruptAttack();
     }
 
-    [ClientRpc]
     public void RpcInterruptReload()
     {
-        if (!isServer)
+        CallNetFunction(NetFuncInterruptReload, FunctionReceivers.All);
+    }
+
+    [NetFunction]
+    protected void NetFuncInterruptReload()
+    {
+        if (!IsServer)
             InterruptReload();
     }
 
-    [ClientRpc]
     private void RpcWeaponChanged(int index)
     {
-        if (!isServer)
-            OnWeaponChanged(index);
+        CallNetFunction(NetFuncWeaponChanged, FunctionReceivers.All, index);
     }
-    
-    [ClientRpc]
-    public void RpcEffect(NetworkInstanceId triggerId, byte effectType)
+
+    [NetFunction]
+    protected void NetFuncWeaponChanged(int index)
     {
-        GameObject triggerObject = isServer ? NetworkServer.FindLocalObject(triggerId) : ClientScene.FindLocalObject(triggerId);
-        if (triggerObject != null)
+        if (!IsServer)
+            OnWeaponChanged(false, index);
+    }
+
+    public void RpcEffect(uint triggerId, byte effectType)
+    {
+        CallNetFunction(NetFuncRpcEffect, FunctionReceivers.All, triggerId, effectType);
+    }
+
+    [NetFunction]
+    protected void NetFuncRpcEffect(uint triggerId, byte effectType)
+    {
+        LiteNetLibIdentity triggerObject;
+        if (Manager.Assets.TryGetSpawnedObject(triggerId, out triggerObject))
         {
             if (effectType == RPC_EFFECT_DAMAGE_SPAWN || effectType == RPC_EFFECT_DAMAGE_HIT)
             {
@@ -1306,31 +1366,51 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [ClientRpc]
     public void RpcDash()
     {
+        CallNetFunction(NetFuncRpcDash, FunctionReceivers.All);
+    }
+
+    [NetFunction]
+    protected void NetFuncRpcDash()
+    {
         // Just play dash animation on another clients
-        if (!isLocalPlayer)
+        if (!IsOwnerClient)
         {
             isDashing = true;
             dashingTime = Time.unscaledTime;
         }
     }
 
-    [TargetRpc]
-    private void TargetDead(NetworkConnection conn)
+    private void TargetDead(long conn)
+    {
+        CallNetFunction(NetFuncDead, conn);
+    }
+
+    [NetFunction]
+    protected void NetFuncDead()
     {
         deathTime = Time.unscaledTime;
     }
 
-    [TargetRpc]
-    private void TargetSpawn(NetworkConnection conn, Vector3 position)
+    private void TargetSpawn(long conn, Vector3 position)
+    {
+        CallNetFunction(NetFuncSpawn, conn, position);
+    }
+
+    [NetFunction]
+    protected void NetFuncSpawn(Vector3 position)
     {
         transform.position = position;
     }
 
-    [TargetRpc]
-    private void TargetRewardCurrency(NetworkConnection conn, string currencyId, int amount)
+    private void TargetRewardCurrency(long conn, string currencyId, int amount)
+    {
+        CallNetFunction(NetFuncRewardCurrency, conn, currencyId, amount);
+    }
+
+    [NetFunction]
+    protected void NetFuncRewardCurrency(string currencyId, int amount)
     {
         MonetizationManager.Save.AddCurrency(currencyId, amount);
     }

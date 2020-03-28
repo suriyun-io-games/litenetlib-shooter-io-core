@@ -1,10 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLib.Utils;
+using LiteNetLibManager;
 
 [System.Serializable]
-public struct EquippedWeapon
+public struct EquippedWeapon : INetSerializable
 {
     public static readonly EquippedWeapon Empty = new EquippedWeapon();
     [HideInInspector]
@@ -136,6 +137,20 @@ public struct EquippedWeapon
     {
         return Empty.Equals(this);
     }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(weaponId);
+        writer.Put(currentAmmo);
+        writer.Put(currentReserveAmmo);
+    }
+
+    public void Deserialize(NetDataReader reader)
+    {
+        weaponId = reader.GetInt();
+        currentAmmo = reader.GetInt();
+        currentReserveAmmo = reader.GetInt();
+    }
 }
 
-public class SyncListEquippedWeapon : SyncListStruct<EquippedWeapon> { }
+public class SyncListEquippedWeapon : LiteNetLibSyncList<EquippedWeapon> { }

@@ -1,12 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 [RequireComponent(typeof(CharacterEntity))]
-public class BRCharacterEntityExtra : NetworkBehaviour
+public class BRCharacterEntityExtra : LiteNetLibBehaviour
 {
-    [SyncVar]
+    [SyncField]
     public bool isSpawned;
     public bool isGroundOnce { get; private set; }
 
@@ -44,9 +44,9 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         var maxRandomDist = 30f;
         if (brGameManager != null)
         {
-            if (NetworkServer.active && brGameManager.currentState != BRState.WaitingForPlayers)
+            if (IsServer && brGameManager.currentState != BRState.WaitingForPlayers)
             {
-                NetworkServer.Destroy(TempCharacterEntity.gameObject);
+                TempCharacterEntity.NetworkDestroy();
                 return;
             }
             maxRandomDist = brGameManager.spawnerMoveDuration * 0.25f;
@@ -54,12 +54,15 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         botRandomSpawn = Random.Range(0f, maxRandomDist);
     }
 
-    public override void OnStartLocalPlayer()
+    public override void OnSetOwnerClient(bool isOwnerClient)
     {
-        base.OnStartLocalPlayer();
-        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
-        if (brGameManager != null && brGameManager.currentState != BRState.WaitingForPlayers)
-            GameNetworkManager.Singleton.StopHost();
+        base.OnSetOwnerClient(isOwnerClient);
+        if (IsOwnerClient)
+        {
+            var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+            if (brGameManager != null && brGameManager.currentState != BRState.WaitingForPlayers)
+                GameNetworkManager.Singleton.StopHost();
+        }
     }
 
     private void Start()
@@ -75,7 +78,7 @@ public class BRCharacterEntityExtra : NetworkBehaviour
     private void Update()
     {
         var brGameManager = GameplayManager.Singleton as BRGameplayManager;
-        if (isServer)
+        if (IsServer)
         {
             if (brGameManager.currentState != BRState.WaitingForPlayers && Time.realtimeSinceStartup - lastCircleCheckTime >= 1f)
             {
@@ -93,7 +96,7 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         }
         if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
         {
-            if (isServer && !botSpawnCalled && TempCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(TempCharacterEntity))
+            if (IsServer && !botSpawnCalled && TempCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(TempCharacterEntity))
             {
                 botSpawnCalled = true;
                 StartCoroutine(BotSpawnRoutine());
@@ -103,7 +106,7 @@ public class BRCharacterEntityExtra : NetworkBehaviour
             if (TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = false;
             TempCharacterEntity.IsHidding = true;
-            if (isServer || isLocalPlayer)
+            if (IsServer || IsOwnerClient)
             {
                 TempTransform.position = brGameManager.GetSpawnerPosition();
                 TempTransform.rotation = brGameManager.GetSpawnerRotation();
@@ -111,7 +114,7 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         }
         else if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
         {
-            if (isServer && !botDeadRemoveCalled && TempCharacterEntity is BotEntity && TempCharacterEntity.IsDead)
+            if (IsServer && !botDeadRemoveCalled && TempCharacterEntity is BotEntity && TempCharacterEntity.IsDead)
             {
                 botDeadRemoveCalled = true;
                 StartCoroutine(BotDeadRemoveRoutine());
@@ -133,12 +136,12 @@ public class BRCharacterEntityExtra : NetworkBehaviour
     IEnumerator BotDeadRemoveRoutine()
     {
         yield return new WaitForSeconds(5f);
-        NetworkServer.Destroy(gameObject);
+        NetworkDestroy();
     }
 
     private void OnDead()
     {
-        if (!isServer)
+        if (!IsServer)
             return;
         var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
         if (brGameplayManager != null)
@@ -165,9 +168,10 @@ public class BRCharacterEntityExtra : NetworkBehaviour
             isGroundOnce = true;
     }
 
-    [Server]
     public void ServerCharacterSpawn()
     {
+        if (!IsServer)
+            return;
         var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
         if (!isSpawned && brGameplayManager != null)
         {
@@ -176,26 +180,41 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         }
     }
 
-    [Command]
     public void CmdCharacterSpawn()
+    {
+        CallNetFunction(NetFuncCharacterSpawn, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    public void NetFuncCharacterSpawn()
     {
         var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
         if (!isSpawned && brGameplayManager != null && brGameplayManager.CanSpawnCharacter(TempCharacterEntity))
             ServerCharacterSpawn();
     }
 
-    [ClientRpc]
     public void RpcCharacterSpawned(Vector3 spawnPosition)
+    {
+        CallNetFunction(NetFuncCharacterSpawned, FunctionReceivers.All, spawnPosition);
+    }
+
+    [NetFunction]
+    public void NetFuncCharacterSpawned(Vector3 spawnPosition)
     {
         TempCharacterEntity.CacheTransform.position = spawnPosition;
         TempCharacterEntity.CacheRigidbody.useGravity = true;
         TempCharacterEntity.CacheRigidbody.isKinematic = false;
     }
 
-    [ClientRpc]
     public void RpcRankResult(int rank)
     {
-        if (isLocalPlayer)
+        CallNetFunction(NetFuncRankResult, FunctionReceivers.All, rank);
+    }
+
+    [NetFunction]
+    public void NetFuncRankResult(int rank)
+    {
+        if (IsOwnerClient)
         {
             if (GameNetworkManager.Singleton.gameRule != null &&
                 GameNetworkManager.Singleton.gameRule is BattleRoyaleNetworkGameRule)

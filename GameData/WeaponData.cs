@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
+using LiteNetLib;
 
 public class WeaponData : ItemData
 {
@@ -39,7 +40,7 @@ public class WeaponData : ItemData
 
     public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)
     {
-        if (attacker == null || !NetworkServer.active)
+        if (attacker == null || !GameNetworkManager.Singleton.IsServer)
             return;
 
         var characterColliders = Physics.OverlapSphere(attacker.CacheTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
@@ -55,36 +56,36 @@ public class WeaponData : ItemData
             var addRotationY = Random.Range(-staggerX, staggerX);
             var position = launchTransform.position;
             var direction = attacker.CacheTransform.forward;
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.ObjectId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
             var msg = new OpMsgCharacterAttack();
             msg.weaponId = GetHashId();
             msg.position = position;
             msg.direction = direction;
-            msg.attackerNetId = attacker.netId;
+            msg.attackerNetId = attacker.ObjectId;
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;
             foreach (var characterCollider in characterColliders)
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();
                 if (character != null && !(character is BotEntity))
-                    NetworkServer.SendToClient(character.connectionToClient.connectionId, msg.OpId, msg);
+                    GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
             }
         }
 
         if (damagePrefab.spawnEffectPrefab)
         {
             // Instantiate spawn effect at clients
-            attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);
+            attacker.RpcEffect(attacker.ObjectId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);
         }
 
         if (damagePrefab.muzzleEffectPrefab)
         {
             // Instantiate muzzle effect at clients
             if (!isLeftHandWeapon)
-                attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_MUZZLE_SPAWN_R);
+                attacker.RpcEffect(attacker.ObjectId, CharacterEntity.RPC_EFFECT_MUZZLE_SPAWN_R);
             else
-                attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_MUZZLE_SPAWN_L);
+                attacker.RpcEffect(attacker.ObjectId, CharacterEntity.RPC_EFFECT_MUZZLE_SPAWN_L);
         }
     }
 

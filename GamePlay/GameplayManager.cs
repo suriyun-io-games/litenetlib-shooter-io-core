@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
-public class GameplayManager : NetworkBehaviour
+public class GameplayManager : LiteNetLibBehaviour
 {
     [System.Serializable]
     public struct RewardCurrency
@@ -62,8 +62,8 @@ public class GameplayManager : NetworkBehaviour
         foreach (var powerUp in powerUps)
         {
             var powerUpPrefab = powerUp.powerUpPrefab;
-            if (powerUpPrefab != null && !ClientScene.prefabs.ContainsValue(powerUpPrefab.gameObject))
-                ClientScene.RegisterPrefab(powerUpPrefab.gameObject);
+            if (powerUpPrefab != null)
+                Manager.Assets.RegisterPrefab(powerUpPrefab.Identity);
             if (powerUpPrefab != null && !powerUpEntities.ContainsKey(powerUpPrefab.name))
                 powerUpEntities.Add(powerUpPrefab.name, powerUpPrefab);
         }
@@ -71,8 +71,8 @@ public class GameplayManager : NetworkBehaviour
         foreach (var pickup in pickups)
         {
             var pickupPrefab = pickup.pickupPrefab;
-            if (pickupPrefab != null && !ClientScene.prefabs.ContainsValue(pickupPrefab.gameObject))
-                ClientScene.RegisterPrefab(pickupPrefab.gameObject);
+            if (pickupPrefab != null)
+                Manager.Assets.RegisterPrefab(pickupPrefab.Identity);
             if (pickupPrefab != null && !pickupEntities.ContainsKey(pickupPrefab.name))
                 pickupEntities.Add(pickupPrefab.name, pickupPrefab);
         }
@@ -83,7 +83,14 @@ public class GameplayManager : NetworkBehaviour
         }
     }
 
-    public override void OnStartServer()
+
+    protected virtual void Start()
+    {
+        if (IsServer)
+            OnStartServer();
+    }
+
+    public virtual void OnStartServer()
     {
         foreach (var powerUp in powerUps)
         {
@@ -108,13 +115,13 @@ public class GameplayManager : NetworkBehaviour
 
     public void SpawnPowerUp(string prefabName, Vector3 position)
     {
-        if (!isServer || string.IsNullOrEmpty(prefabName))
+        if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
         PowerUpEntity powerUpPrefab = null;
         if (powerUpEntities.TryGetValue(prefabName, out powerUpPrefab)) {
             var powerUpEntity = Instantiate(powerUpPrefab, position, Quaternion.identity);
             powerUpEntity.prefabName = prefabName;
-            NetworkServer.Spawn(powerUpEntity.gameObject);
+            Manager.Assets.NetworkSpawn(powerUpEntity.gameObject);
         }
     }
 
@@ -125,14 +132,14 @@ public class GameplayManager : NetworkBehaviour
 
     public void SpawnPickup(string prefabName, Vector3 position)
     {
-        if (!isServer || string.IsNullOrEmpty(prefabName))
+        if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
         PickupEntity pickupPrefab = null;
         if (pickupEntities.TryGetValue(prefabName, out pickupPrefab))
         {
             var pickupEntity = Instantiate(pickupPrefab, position, Quaternion.identity);
             pickupEntity.prefabName = prefabName;
-            NetworkServer.Spawn(pickupEntity.gameObject);
+            Manager.Assets.NetworkSpawn(pickupEntity.gameObject);
         }
     }
     
