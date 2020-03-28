@@ -396,10 +396,25 @@ public class CharacterEntity : BaseNetworkGameCharacter
         deathTime = Time.unscaledTime;
     }
 
+    public override void OnStartClient()
+    {
+        if (!IsServer)
+        {
+            OnHeadChanged(selectHead);
+            OnCharacterChanged(selectCharacter);
+            OnWeaponsChanged(Operation.Dirty, 0);
+            OnCustomEquipmentsChanged(Operation.Dirty, 0);
+            OnWeaponChanged(selectWeaponIndex);
+        }
+    }
+
     public override void OnStartServer()
     {
-        for (var i = 0; i < MAX_EQUIPPABLE_WEAPON_AMOUNT; ++i)
-            equippedWeapons.Add(EquippedWeapon.Empty);
+        OnHeadChanged(selectHead);
+        OnCharacterChanged(selectCharacter);
+        OnWeaponsChanged(Operation.Dirty, 0);
+        OnCustomEquipmentsChanged(Operation.Dirty, 0);
+        OnWeaponChanged(selectWeaponIndex);
         attackingActionId = -1;
     }
 
@@ -890,7 +905,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return WeaponData.damagePrefab.GetAttackRange();
     }
 
-    protected virtual void OnCharacterChanged(bool isInit, int value)
+    protected virtual void OnCharacterChanged(int value)
     {
         if (characterModel != null)
             Destroy(characterModel.gameObject);
@@ -917,7 +932,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnHeadChanged(bool isInit, int value)
+    protected virtual void OnHeadChanged(int value)
     {
         headData = GameInstance.GetHead(value);
         if (characterModel != null && headData != null)
@@ -925,7 +940,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnWeaponChanged(bool isInit, int value)
+    protected virtual void OnWeaponChanged(int value)
     {
         if (selectWeaponIndex < 0 || selectWeaponIndex >= equippedWeapons.Count)
             return;
@@ -939,6 +954,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         // Changes weapon list, equip first weapon equipped position
         if (IsServer)
         {
+            while (equippedWeapons.Count < MAX_EQUIPPABLE_WEAPON_AMOUNT)
+                equippedWeapons.Add(EquippedWeapon.Empty);
+
             var minEquipPos = int.MaxValue;
             for (var i = 0; i < selectWeapons.Count; ++i)
             {
@@ -953,7 +971,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                     defaultWeaponIndex = equipPos;
                     minEquipPos = equipPos;
                 }
-
+                
                 var equippedWeapon = new EquippedWeapon();
                 equippedWeapon.defaultId = weaponData.GetHashId();
                 equippedWeapon.weaponId = weaponData.GetHashId();
@@ -1062,7 +1080,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             equippedWeapons.Dirty(i);
         }
         selectWeaponIndex = defaultWeaponIndex;
-        OnWeaponChanged(false, selectWeaponIndex);
+        OnWeaponChanged(selectWeaponIndex);
         RpcWeaponChanged(selectWeaponIndex);
 
         isPlayingAttackAnim = false;
@@ -1119,7 +1137,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             // Trigger change weapon
             if (selectWeaponIndex == equipPosition)
             {
-                OnWeaponChanged(false, selectWeaponIndex);
+                OnWeaponChanged(selectWeaponIndex);
                 RpcWeaponChanged(selectWeaponIndex);
             }
         }
@@ -1314,7 +1332,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected void NetFuncWeaponChanged(int index)
     {
         if (!IsServer)
-            OnWeaponChanged(false, index);
+            OnWeaponChanged(index);
     }
 
     public void RpcEffect(uint triggerId, byte effectType)
