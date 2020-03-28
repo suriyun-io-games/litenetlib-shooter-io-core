@@ -82,13 +82,7 @@ public class GameplayManager : LiteNetLibBehaviour
         }
     }
 
-    protected virtual void Start()
-    {
-        if (IsServer)
-            OnStartServer();
-    }
-
-    public virtual void OnStartServer()
+    public override void OnStartServer()
     {
         foreach (var powerUp in powerUps)
         {
@@ -104,6 +98,11 @@ public class GameplayManager : LiteNetLibBehaviour
             for (var i = 0; i < pickup.amount; ++i)
                 SpawnPickup(pickup.pickupPrefab.name);
         }
+    }
+
+    public override void OnStartClient()
+    {
+
     }
 
     public void SpawnPowerUp(string prefabName)

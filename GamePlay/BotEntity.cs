@@ -50,7 +50,7 @@ public class BotEntity : CharacterEntity
         randomDashDuration = dashDuration + Random.Range(randomDashDurationMin, randomDashDurationMax);
     }
 
-    public override void OnStartLocalPlayer()
+    public override void OnStartOwnerClient()
     {
         // Do nothing
     }

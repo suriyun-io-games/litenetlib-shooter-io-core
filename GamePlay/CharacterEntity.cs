@@ -418,9 +418,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         attackingActionId = -1;
     }
 
-    public override void OnStartLocalPlayer()
+    public override void OnStartOwnerClient()
     {
-        base.OnStartLocalPlayer();
+        base.OnStartOwnerClient();
 
         var followCam = FindObjectOfType<FollowCamera>();
         followCam.target = CacheTransform;
