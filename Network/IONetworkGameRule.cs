@@ -105,29 +105,21 @@ public class IONetworkGameRule : BaseNetworkGameRule
         return true;
     }
 
-    public override void OnStartServer()
-    {
-        base.OnStartServer();
-
-        if (overrideCharacterPrefab != null)
-            networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
-
-        if (overrideBotPrefab != null)
-            networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
-    }
-
     public override void InitialClientObjects(LiteNetLibClient client)
     {
-        if (overrideCharacterPrefab != null)
-            networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
-
-        if (overrideBotPrefab != null)
-            networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
-
         var ui = FindObjectOfType<UIGameplay>();
         if (ui == null && uiGameplayPrefab != null)
             ui = Instantiate(uiGameplayPrefab);
         if (ui != null)
             ui.gameObject.SetActive(true);
+    }
+
+    public override void RegisterPrefabs()
+    {
+        if (overrideCharacterPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
+
+        if (overrideBotPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
     }
 }
