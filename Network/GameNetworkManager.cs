@@ -4,7 +4,6 @@ using UnityEngine;
 using LiteNetLibManager;
 using LiteNetLib.Utils;
 
-[RequireComponent(typeof(GameNetworkDiscovery))]
 public class GameNetworkManager : BaseNetworkGameManager
 {
     public static new GameNetworkManager Singleton
