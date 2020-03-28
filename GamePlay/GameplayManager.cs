@@ -57,13 +57,12 @@ public class GameplayManager : LiteNetLibBehaviour
             return;
         }
         Singleton = this;
-
         powerUpEntities.Clear();
         foreach (var powerUp in powerUps)
         {
             var powerUpPrefab = powerUp.powerUpPrefab;
             if (powerUpPrefab != null)
-                Manager.Assets.RegisterPrefab(powerUpPrefab.Identity);
+                GameNetworkManager.Singleton.Assets.RegisterPrefab(powerUpPrefab.Identity);
             if (powerUpPrefab != null && !powerUpEntities.ContainsKey(powerUpPrefab.name))
                 powerUpEntities.Add(powerUpPrefab.name, powerUpPrefab);
         }
@@ -72,7 +71,7 @@ public class GameplayManager : LiteNetLibBehaviour
         {
             var pickupPrefab = pickup.pickupPrefab;
             if (pickupPrefab != null)
-                Manager.Assets.RegisterPrefab(pickupPrefab.Identity);
+                GameNetworkManager.Singleton.Assets.RegisterPrefab(pickupPrefab.Identity);
             if (pickupPrefab != null && !pickupEntities.ContainsKey(pickupPrefab.name))
                 pickupEntities.Add(pickupPrefab.name, pickupPrefab);
         }
@@ -82,7 +81,6 @@ public class GameplayManager : LiteNetLibBehaviour
             attributes[availableAttribute.name] = availableAttribute;
         }
     }
-
 
     protected virtual void Start()
     {
