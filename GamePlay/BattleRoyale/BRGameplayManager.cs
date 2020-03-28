@@ -356,12 +356,12 @@ public class BRGameplayManager : GameplayManager
         return character.CacheTransform.position = GetSpawnerPosition();
     }
 
-    protected void OnCurrentCountdownChanged(bool isInit, float currentCountdown)
+    protected void OnCurrentCountdownChanged(float currentCountdown)
     {
         CurrentCountdown = currentCountdown;
     }
 
-    protected void OnSpawnerMoveCountdownChanged(bool isInit, float spawnerMoveCountdown)
+    protected void OnSpawnerMoveCountdownChanged(float spawnerMoveCountdown)
     {
         SpawnerMoveCountdown = spawnerMoveCountdown;
     }
