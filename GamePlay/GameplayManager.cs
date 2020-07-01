@@ -114,7 +114,7 @@ public class GameplayManager : LiteNetLibBehaviour
     {
         if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
-        PowerUpEntity powerUpPrefab = null;
+        PowerUpEntity powerUpPrefab;
         if (powerUpEntities.TryGetValue(prefabName, out powerUpPrefab)) {
             var powerUpEntity = Instantiate(powerUpPrefab, position, Quaternion.identity);
             powerUpEntity.prefabName = prefabName;
@@ -131,7 +131,7 @@ public class GameplayManager : LiteNetLibBehaviour
     {
         if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
-        PickupEntity pickupPrefab = null;
+        PickupEntity pickupPrefab;
         if (pickupEntities.TryGetValue(prefabName, out pickupPrefab))
         {
             var pickupEntity = Instantiate(pickupPrefab, position, Quaternion.identity);
