@@ -134,7 +134,7 @@ public class DamageEntity : MonoBehaviour
             hitSomeAliveCharacter = true;
             ApplyDamage(otherCharacter);
         }
-        
+
         Collider[] colliders = Physics.OverlapSphere(CacheTransform.position, radius, 1 << GameInstance.Singleton.characterLayer);
         for (int i = 0; i < colliders.Length; i++)
         {
@@ -156,7 +156,7 @@ public class DamageEntity : MonoBehaviour
             if (hitFx != null && hitFx.Length > 0 && AudioManager.Singleton != null)
                 AudioSource.PlayClipAtPoint(hitFx[Random.Range(0, hitFx.Length - 1)], CacheTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
         }
-        
+
         Destroy(gameObject);
         isDead = true;
     }
@@ -209,7 +209,7 @@ public class DamageEntity : MonoBehaviour
         float addRotationX,
         float addRotationY)
     {
-        WeaponData weaponData = null;
+        WeaponData weaponData;
         if (GameInstance.Weapons.TryGetValue(weaponId, out weaponData))
             return InstantiateNewEntity(weaponData.damagePrefab, isLeftHandWeapon, position, direction, attackerNetId, addRotationX, addRotationY);
         return null;
