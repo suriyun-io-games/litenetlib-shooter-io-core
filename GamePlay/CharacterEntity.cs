@@ -1049,7 +1049,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return;
         if (Respawn(isWatchedAds))
         {
-            var gameplayManager = GameplayManager.Singleton;
             ServerInvincible();
             OnSpawn();
             var position = GetSpawnPosition();
@@ -1323,7 +1322,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             InterruptReload();
     }
 
-    private void RpcWeaponChanged(int index)
+    public void RpcWeaponChanged(int index)
     {
         CallNetFunction(NetFuncWeaponChanged, FunctionReceivers.All, index);
     }
@@ -1400,7 +1399,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    private void TargetDead(long conn)
+    public void TargetDead(long conn)
     {
         CallNetFunction(NetFuncDead, conn);
     }
@@ -1411,7 +1410,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         deathTime = Time.unscaledTime;
     }
 
-    private void TargetSpawn(long conn, Vector3 position)
+    public void TargetSpawn(long conn, Vector3 position)
     {
         CallNetFunction(NetFuncSpawn, conn, position);
     }
@@ -1422,7 +1421,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         transform.position = position;
     }
 
-    private void TargetRewardCurrency(long conn, string currencyId, int amount)
+    public void TargetRewardCurrency(long conn, string currencyId, int amount)
     {
         CallNetFunction(NetFuncRewardCurrency, conn, currencyId, amount);
     }
