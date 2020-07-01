@@ -37,8 +37,8 @@ public class OpMsgCharacterAttack : BaseOpMsg
     {
         writer.Put(weaponId);
         writer.Put(isLeftHandWeapon);
-        writer.Put(position);
-        writer.Put(direction);
+        writer.PutVector3(position);
+        writer.PutVector3(direction);
         writer.PutPackedUInt(attackerNetId);
         writer.Put(addRotationX);
         writer.Put(addRotationY);
