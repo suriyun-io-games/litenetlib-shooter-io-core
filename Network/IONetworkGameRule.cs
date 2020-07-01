@@ -116,6 +116,12 @@ public class IONetworkGameRule : BaseNetworkGameRule
 
     public override void RegisterPrefabs()
     {
+        if (GameInstance.Singleton.characterPrefab != null)
+            networkManager.Assets.RegisterPrefab(GameInstance.Singleton.characterPrefab.Identity);
+
+        if (GameInstance.Singleton.botPrefab != null)
+            networkManager.Assets.RegisterPrefab(GameInstance.Singleton.botPrefab.Identity);
+
         if (overrideCharacterPrefab != null)
             networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
 
