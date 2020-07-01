@@ -182,11 +182,11 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
 
     public void CmdCharacterSpawn()
     {
-        CallNetFunction(NetFuncCharacterSpawn, FunctionReceivers.Server);
+        CallNetFunction(_CmdCharacterSpawn, FunctionReceivers.Server);
     }
 
     [NetFunction]
-    public void NetFuncCharacterSpawn()
+    public void _CmdCharacterSpawn()
     {
         var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
         if (!isSpawned && brGameplayManager != null && brGameplayManager.CanSpawnCharacter(TempCharacterEntity))
@@ -195,11 +195,11 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
 
     public void RpcCharacterSpawned(Vector3 spawnPosition)
     {
-        CallNetFunction(NetFuncCharacterSpawned, FunctionReceivers.All, spawnPosition);
+        CallNetFunction(_RpcCharacterSpawned, FunctionReceivers.All, spawnPosition);
     }
 
     [NetFunction]
-    public void NetFuncCharacterSpawned(Vector3 spawnPosition)
+    public void _RpcCharacterSpawned(Vector3 spawnPosition)
     {
         TempCharacterEntity.CacheTransform.position = spawnPosition;
         TempCharacterEntity.CacheRigidbody.useGravity = true;
@@ -208,11 +208,11 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
 
     public void RpcRankResult(int rank)
     {
-        CallNetFunction(NetFuncRankResult, FunctionReceivers.All, rank);
+        CallNetFunction(_RpcRankResult, FunctionReceivers.All, rank);
     }
 
     [NetFunction]
-    public void NetFuncRankResult(int rank)
+    public void _RpcRankResult(int rank)
     {
         if (IsOwnerClient)
         {

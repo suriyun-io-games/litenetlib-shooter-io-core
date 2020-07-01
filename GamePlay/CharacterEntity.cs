@@ -1166,11 +1166,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void CmdReady()
     {
-        CallNetFunction(NetFuncReady, FunctionReceivers.Server);
+        CallNetFunction(_CmdReady, FunctionReceivers.Server);
     }
 
     [NetFunction]
-    protected void NetFuncReady()
+    protected void _CmdReady()
     {
         if (!isReady)
         {
@@ -1181,22 +1181,22 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void CmdRespawn(bool isWatchedAds)
     {
-        CallNetFunction(NetFuncRespawn, FunctionReceivers.Server, isWatchedAds);
+        CallNetFunction(_CmdRespawn, FunctionReceivers.Server, isWatchedAds);
     }
 
     [NetFunction]
-    protected void NetFuncRespawn(bool isWatchedAds)
+    protected void _CmdRespawn(bool isWatchedAds)
     {
         ServerRespawn(isWatchedAds);
     }
 
     public void CmdAttack()
     {
-        CallNetFunction(NetFuncAttack, FunctionReceivers.Server);
+        CallNetFunction(_CmdAttack, FunctionReceivers.Server);
     }
 
     [NetFunction]
-    protected void NetFuncAttack()
+    protected void _CmdAttack()
     {
         if (WeaponData != null)
             attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
@@ -1206,33 +1206,33 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void CmdStopAttack()
     {
-        CallNetFunction(NetFuncStopAttack, FunctionReceivers.Server);
+        CallNetFunction(_CmdStopAttack, FunctionReceivers.Server);
     }
 
     [NetFunction]
-    protected void NetFuncStopAttack()
+    protected void _CmdStopAttack()
     {
         attackingActionId = -1;
     }
 
     public void CmdReload()
     {
-        CallNetFunction(NetFuncReload, FunctionReceivers.Server);
+        CallNetFunction(_CmdReload, FunctionReceivers.Server);
     }
 
     [NetFunction]
-    protected void NetFuncReload()
+    protected void _CmdReload()
     {
         ServerReload();
     }
 
     public void CmdAddAttribute(string name)
     {
-        CallNetFunction(NetFuncAddAttribute, FunctionReceivers.Server, name);
+        CallNetFunction(_CmdAddAttribute, FunctionReceivers.Server, name);
     }
 
     [NetFunction]
-    protected void NetFuncAddAttribute(string name)
+    protected void _CmdAddAttribute(string name)
     {
         if (statPoint > 0)
         {
@@ -1248,22 +1248,22 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void CmdChangeWeapon(int index)
     {
-        CallNetFunction(NetFuncChangeWeapon, FunctionReceivers.Server, index);
+        CallNetFunction(_CmdChangeWeapon, FunctionReceivers.Server, index);
     }
 
     [NetFunction]
-    protected void NetFuncChangeWeapon(int index)
+    protected void _CmdChangeWeapon(int index)
     {
         ServerChangeWeapon(index);
     }
 
     public void CmdDash()
     {
-        CallNetFunction(NetFuncDash, FunctionReceivers.Server);
+        CallNetFunction(_CmdDash, FunctionReceivers.Server);
     }
 
     [NetFunction]
-    protected void NetFuncDash()
+    protected void _CmdDash()
     {
         // Play dash animation on other clients
         RpcDash();
@@ -1271,11 +1271,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void CmdPickup(uint netId)
     {
-        CallNetFunction(NetFuncPickup, FunctionReceivers.Server, netId);
+        CallNetFunction(_CmdPickup, FunctionReceivers.Server, netId);
     }
 
     [NetFunction]
-    protected void NetFuncPickup(uint netId)
+    protected void _CmdPickup(uint netId)
     {
         LiteNetLibIdentity go;
         if (!Manager.Assets.TryGetSpawnedObject(netId, out go))
@@ -1288,11 +1288,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void RpcReload()
     {
-        CallNetFunction(NetFuncRpcReload, FunctionReceivers.All);
+        CallNetFunction(_RpcReload, FunctionReceivers.All);
     }
 
     [NetFunction]
-    protected void NetFuncRpcReload()
+    protected void _RpcReload()
     {
         if (!IsServer)
             reloadRoutine = StartCoroutine(ReloadRoutine());
@@ -1300,11 +1300,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void RpcInterruptAttack()
     {
-        CallNetFunction(NetFuncInterruptAttack, FunctionReceivers.All);
+        CallNetFunction(_RpcInterruptAttack, FunctionReceivers.All);
     }
 
     [NetFunction]
-    protected void NetFuncInterruptAttack()
+    protected void _RpcInterruptAttack()
     {
         if (!IsServer)
             InterruptAttack();
@@ -1312,11 +1312,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void RpcInterruptReload()
     {
-        CallNetFunction(NetFuncInterruptReload, FunctionReceivers.All);
+        CallNetFunction(_RpcInterruptReload, FunctionReceivers.All);
     }
 
     [NetFunction]
-    protected void NetFuncInterruptReload()
+    protected void _RpcInterruptReload()
     {
         if (!IsServer)
             InterruptReload();
@@ -1324,11 +1324,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void RpcWeaponChanged(int index)
     {
-        CallNetFunction(NetFuncWeaponChanged, FunctionReceivers.All, index);
+        CallNetFunction(_RpcWeaponChanged, FunctionReceivers.All, index);
     }
 
     [NetFunction]
-    protected void NetFuncWeaponChanged(int index)
+    protected void _RpcWeaponChanged(int index)
     {
         if (!IsServer)
             OnWeaponChanged(index);
@@ -1336,11 +1336,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void RpcEffect(uint triggerId, byte effectType)
     {
-        CallNetFunction(NetFuncRpcEffect, FunctionReceivers.All, triggerId, effectType);
+        CallNetFunction(_RpcEffect, FunctionReceivers.All, triggerId, effectType);
     }
 
     [NetFunction]
-    protected void NetFuncRpcEffect(uint triggerId, byte effectType)
+    protected void _RpcEffect(uint triggerId, byte effectType)
     {
         LiteNetLibIdentity triggerObject;
         if (Manager.Assets.TryGetSpawnedObject(triggerId, out triggerObject))
@@ -1385,11 +1385,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void RpcDash()
     {
-        CallNetFunction(NetFuncRpcDash, FunctionReceivers.All);
+        CallNetFunction(_RpcDash, FunctionReceivers.All);
     }
 
     [NetFunction]
-    protected void NetFuncRpcDash()
+    protected void _RpcDash()
     {
         // Just play dash animation on another clients
         if (!IsOwnerClient)
@@ -1401,33 +1401,33 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void TargetDead(long conn)
     {
-        CallNetFunction(NetFuncDead, conn);
+        CallNetFunction(_TargetDead, conn);
     }
 
     [NetFunction]
-    protected void NetFuncDead()
+    protected void _TargetDead()
     {
         deathTime = Time.unscaledTime;
     }
 
     public void TargetSpawn(long conn, Vector3 position)
     {
-        CallNetFunction(NetFuncSpawn, conn, position);
+        CallNetFunction(_TargetSpawn, conn, position);
     }
 
     [NetFunction]
-    protected void NetFuncSpawn(Vector3 position)
+    protected void _TargetSpawn(Vector3 position)
     {
         transform.position = position;
     }
 
     public void TargetRewardCurrency(long conn, string currencyId, int amount)
     {
-        CallNetFunction(NetFuncRewardCurrency, conn, currencyId, amount);
+        CallNetFunction(_TargetRewardCurrency, conn, currencyId, amount);
     }
 
     [NetFunction]
-    protected void NetFuncRewardCurrency(string currencyId, int amount)
+    protected void _TargetRewardCurrency(string currencyId, int amount)
     {
         MonetizationManager.Save.AddCurrency(currencyId, amount);
     }
