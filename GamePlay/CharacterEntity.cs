@@ -403,25 +403,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         deathTime = Time.unscaledTime;
     }
 
-    public override void OnStartClient()
-    {
-        if (!IsServer)
-        {
-            OnHeadChanged(selectHead);
-            OnCharacterChanged(selectCharacter);
-            OnWeaponsChanged(Operation.Dirty, 0);
-            OnCustomEquipmentsChanged(Operation.Dirty, 0);
-            OnWeaponChanged(selectWeaponIndex);
-        }
-    }
-
     public override void OnStartServer()
     {
-        OnHeadChanged(selectHead);
-        OnCharacterChanged(selectCharacter);
-        OnWeaponsChanged(Operation.Dirty, 0);
-        OnCustomEquipmentsChanged(Operation.Dirty, 0);
-        OnWeaponChanged(selectWeaponIndex);
         attackingActionId = -1;
     }
 
@@ -987,6 +970,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 equippedWeapons[equipPos] = equippedWeapon;
             }
             selectWeaponIndex = defaultWeaponIndex;
+        }
+        else if (IsClient)
+        {
+            // Try change weapon model
+            OnWeaponChanged(selectWeaponIndex);
         }
     }
 
