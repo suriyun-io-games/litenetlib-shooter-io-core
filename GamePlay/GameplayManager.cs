@@ -59,9 +59,8 @@ public class GameplayManager : LiteNetLibBehaviour
         Singleton = this;
     }
 
-    public override void OnSetup()
+    public void RegisterPrefabs()
     {
-        base.OnSetup();
         powerUpEntities.Clear();
         foreach (var powerUp in powerUps)
         {
