@@ -48,7 +48,7 @@ public class GameNetworkManager : BaseNetworkGameManager
         RegisterClientMessage(new OpMsgCharacterAttack().OpId, ReadMsgCharacterAttack);
     }
 
-    protected void ReadMsgCharacterAttack(LiteNetLibMessageHandler messageHandler)
+    protected void ReadMsgCharacterAttack(MessageHandlerData messageHandler)
     {
         var msg = messageHandler.ReadMessage<OpMsgCharacterAttack>();
         // Instantiates damage entities on clients only
