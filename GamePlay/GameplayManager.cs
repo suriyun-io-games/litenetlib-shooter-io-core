@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using LiteNetLibManager;
 
@@ -48,6 +47,7 @@ public class GameplayManager : LiteNetLibBehaviour
     public readonly Dictionary<string, PowerUpEntity> powerUpEntities = new Dictionary<string, PowerUpEntity>();
     public readonly Dictionary<string, PickupEntity> pickupEntities = new Dictionary<string, PickupEntity>();
     public readonly Dictionary<string, CharacterAttributes> attributes = new Dictionary<string, CharacterAttributes>();
+    private bool isRegisteredPrefabs;
 
     protected virtual void Awake()
     {
@@ -61,6 +61,9 @@ public class GameplayManager : LiteNetLibBehaviour
 
     public void RegisterPrefabs()
     {
+        if (isRegisteredPrefabs)
+            return;
+        isRegisteredPrefabs = true;
         powerUpEntities.Clear();
         foreach (var powerUp in powerUps)
         {
@@ -88,6 +91,7 @@ public class GameplayManager : LiteNetLibBehaviour
 
     public override void OnStartServer()
     {
+        RegisterPrefabs();
         foreach (var powerUp in powerUps)
         {
             if (powerUp.powerUpPrefab == null)
