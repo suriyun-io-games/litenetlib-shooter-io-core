@@ -1,16 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using LiteNetLibManager;
+﻿using UnityEngine;
 
 public class BattleRoyaleNetworkGameRule : IONetworkGameRule
 {
     [Tooltip("Maximum amount of bots will be filled when start game")]
     public int fillBots = 10;
-    public int endMatchCountDown = 10;
     [Tooltip("Rewards for each ranking, sort from high to low (1 - 10)")]
     public MatchReward[] rewards;
-    public int EndMatchCountingDown { get; protected set; }
     public override bool HasOptionBotCount { get { return false; } }
     public override bool HasOptionMatchTime { get { return false; } }
     public override bool HasOptionMatchKill { get { return false; } }
@@ -20,25 +15,9 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
     public override bool ShowZeroAssistCountWhenDead { get { return false; } }
     public override bool ShowZeroDieCountWhenDead { get { return false; } }
     
-    protected override void EndMatch()
-    {
-        networkManager.StartCoroutine(EndMatchRoutine());
-    }
-
     public void SetRewards(int rank)
     {
         MatchRewardHandler.SetRewards(rank, rewards);
-    }
-
-    IEnumerator EndMatchRoutine()
-    {
-        EndMatchCountingDown = endMatchCountDown;
-        while (EndMatchCountingDown > 0)
-        {
-            yield return new WaitForSeconds(1);
-            --EndMatchCountingDown;
-        }
-        networkManager.StopHost();
     }
 
     public override bool RespawnCharacter(BaseNetworkGameCharacter character, params object[] extraParams)
@@ -80,7 +59,6 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
             if (!hasUnspawnedCharacter)
             {
                 IsMatchEnded = true;
-                EndMatch();
             }
         }
     }
@@ -90,7 +68,7 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
         if (fillBots <= 0)
             return;
 
-        var botCount = networkManager.maxConnections - networkManager.Characters.Count;
+        var botCount = NetworkManager.maxConnections - NetworkManager.Characters.Count;
         if (botCount > fillBots)
             botCount = fillBots;
         for (var i = 0; i < botCount; ++i)
@@ -99,8 +77,8 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
             if (character == null)
                 continue;
             
-            networkManager.Assets.NetworkSpawn(character.gameObject);
-            networkManager.RegisterCharacter(character);
+            NetworkManager.Assets.NetworkSpawn(character.gameObject);
+            NetworkManager.RegisterCharacter(character);
         }
     }
 }

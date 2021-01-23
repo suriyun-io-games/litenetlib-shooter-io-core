@@ -42,9 +42,9 @@ public class GameNetworkManager : BaseNetworkGameManager
         return msg;
     }
 
-    protected override void RegisterClientMessages()
+    protected override void RegisterMessages()
     {
-        base.RegisterClientMessages();
+        base.RegisterMessages();
         RegisterClientMessage(new OpMsgCharacterAttack().OpId, ReadMsgCharacterAttack);
     }
 

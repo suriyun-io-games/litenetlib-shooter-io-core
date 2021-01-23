@@ -152,6 +152,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
         get { return hp <= 0; }
     }
 
+    public override bool IsBot
+    {
+        get { return false; }
+    }
+
     public System.Action onDead;
     public readonly HashSet<PickupEntity> PickableEntities = new HashSet<PickupEntity>();
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
