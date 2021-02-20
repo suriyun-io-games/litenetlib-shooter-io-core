@@ -437,8 +437,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (NetworkManager != null && NetworkManager.IsMatchEnded)
             return;
 
+        var targetSimulateSpeed = GetMoveSpeed() * (isDashing ? dashMoveSpeedMultiplier : 1f);
         CacheNetTransform.interpolateMode = LiteNetLibTransform.InterpolateMode.FixedSpeed;
-        CacheNetTransform.fixedInterpolateSpeed = TotalMoveSpeed;
+        CacheNetTransform.fixedInterpolateSpeed = targetSimulateSpeed;
 
         if (Hp <= 0)
         {
