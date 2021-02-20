@@ -40,7 +40,6 @@ public class PickupEntity : LiteNetLibBehaviour
 
     private void Awake()
     {
-        gameObject.layer = Physics.IgnoreRaycastLayer;
         var collider = GetComponent<Collider>();
         collider.isTrigger = true;
     }
@@ -48,9 +47,6 @@ public class PickupEntity : LiteNetLibBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (isDead)
-            return;
-
-        if (other.gameObject.layer == Physics.IgnoreRaycastLayer)
             return;
 
         var gameplayManager = GameplayManager.Singleton;
@@ -79,9 +75,6 @@ public class PickupEntity : LiteNetLibBehaviour
     private void OnTriggerExit(Collider other)
     {
         if (isDead)
-            return;
-
-        if (other.gameObject.layer == Physics.IgnoreRaycastLayer)
             return;
 
         var gameplayManager = GameplayManager.Singleton;
