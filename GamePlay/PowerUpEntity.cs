@@ -21,6 +21,7 @@ public class PowerUpEntity : LiteNetLibBehaviour
 
     private void Awake()
     {
+        gameObject.layer = Physics.IgnoreRaycastLayer;
         var collider = GetComponent<Collider>();
         collider.isTrigger = true;
     }
@@ -28,6 +29,9 @@ public class PowerUpEntity : LiteNetLibBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (isDead)
+            return;
+
+        if (other.gameObject.layer == Physics.IgnoreRaycastLayer)
             return;
 
         var character = other.GetComponent<CharacterEntity>();
