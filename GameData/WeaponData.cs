@@ -69,7 +69,7 @@ public class WeaponData : ItemData
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();
                 if (character != null && !(character is BotEntity))
-                    GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
+                    GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, 0, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
             }
         }
 
