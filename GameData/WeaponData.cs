@@ -38,7 +38,7 @@ public class WeaponData : ItemData
     public int weaponAnimId;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
-    public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)
+    public void Launch(CharacterEntity attacker, bool isLeftHandWeapon, Vector3 targetPosition)
     {
         if (attacker == null || !GameNetworkManager.Singleton.IsServer)
             return;
@@ -49,19 +49,15 @@ public class WeaponData : ItemData
         {
             Transform launchTransform;
             attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
-            // An transform's rotation, position will be set when set `Attacker`
-            // So don't worry about them before damage entity going to spawn
-            // Velocity also being set when set `Attacker` too.
             var addRotationX = Random.Range(-staggerY, staggerY);
             var addRotationY = Random.Range(-staggerX, staggerX);
             var position = launchTransform.position;
-            var direction = attacker.CacheTransform.forward;
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.ObjectId, addRotationX, addRotationY);
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, targetPosition, attacker.ObjectId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
             var msg = new OpMsgCharacterAttack();
             msg.weaponId = GetHashId();
             msg.position = position;
-            msg.direction = direction;
+            msg.targetPosition = targetPosition;
             msg.attackerNetId = attacker.ObjectId;
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;

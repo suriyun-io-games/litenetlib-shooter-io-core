@@ -214,21 +214,21 @@ public class DamageEntity : MonoBehaviour
 
     public static DamageEntity InstantiateNewEntity(OpMsgCharacterAttack msg)
     {
-        return InstantiateNewEntity(msg.weaponId, msg.isLeftHandWeapon, msg.position, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+        return InstantiateNewEntity(msg.weaponId, msg.isLeftHandWeapon, msg.position, msg.targetPosition, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
     }
 
     public static DamageEntity InstantiateNewEntity(
         int weaponId,
         bool isLeftHandWeapon,
         Vector3 position,
-        Vector3 direction,
+        Vector3 targetPosition,
         uint attackerNetId,
         float addRotationX,
         float addRotationY)
     {
         WeaponData weaponData;
         if (GameInstance.Weapons.TryGetValue(weaponId, out weaponData))
-            return InstantiateNewEntity(weaponData.damagePrefab, isLeftHandWeapon, position, direction, attackerNetId, addRotationX, addRotationY);
+            return InstantiateNewEntity(weaponData.damagePrefab, isLeftHandWeapon, position, targetPosition, attackerNetId, addRotationX, addRotationY);
         return null;
     }
 
@@ -236,7 +236,7 @@ public class DamageEntity : MonoBehaviour
         DamageEntity prefab,
         bool isLeftHandWeapon,
         Vector3 position,
-        Vector3 direction,
+        Vector3 targetPosition,
         uint attackerNetId,
         float addRotationX,
         float addRotationY)
@@ -255,7 +255,7 @@ public class DamageEntity : MonoBehaviour
             attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
             position = launchTransform.position + attacker.CacheTransform.forward * prefab.spawnForwardOffset;
         }
-        var rotation = Quaternion.LookRotation(direction, Vector3.up);
+        var rotation = Quaternion.LookRotation(targetPosition, Vector3.up);
         rotation = Quaternion.Euler(rotation.eulerAngles + new Vector3(addRotationX, addRotationY));
         var result = Instantiate(prefab, position, rotation);
         result.InitAttackData(isLeftHandWeapon, attackerNetId, addRotationX, addRotationY);
