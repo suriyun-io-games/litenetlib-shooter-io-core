@@ -14,7 +14,17 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
     public override bool ShowZeroKillCountWhenDead { get { return false; } }
     public override bool ShowZeroAssistCountWhenDead { get { return false; } }
     public override bool ShowZeroDieCountWhenDead { get { return false; } }
-    
+
+    public override void OnStartServer()
+    {
+        matchStartTime = Time.unscaledTime;
+        teamScoreA = 0;
+        teamScoreB = 0;
+        teamKillA = 0;
+        teamKillB = 0;
+        IsMatchEnded = false;
+    }
+
     public void SetRewards(int rank)
     {
         MatchRewardHandler.SetRewards(rank, rewards);

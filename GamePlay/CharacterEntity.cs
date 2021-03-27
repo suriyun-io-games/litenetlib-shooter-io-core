@@ -8,6 +8,7 @@ using static LiteNetLibManager.LiteNetLibSyncList;
 
 [RequireComponent(typeof(LiteNetLibTransform))]
 [RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(CharacterMovement))]
 public class CharacterEntity : BaseNetworkGameCharacter
 {
     public const float DISCONNECT_WHEN_NOT_RESPAWN_DURATION = 60;
@@ -184,7 +185,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public float reloadDuration { get; private set; }
     public bool isReady { get; private set; }
     public bool isDead { get; private set; }
-    public bool isGround { get; private set; }
+    public bool isGrounded { get { return CacheCharacterMovement.IsGrounded; } }
     public bool isPlayingAttackAnim { get; private set; }
     public bool isReloading { get; private set; }
     public bool hasAttackInterruptReload { get; private set; }
@@ -231,12 +232,15 @@ public class CharacterEntity : BaseNetworkGameCharacter
             var canvases = GetComponentsInChildren<Canvas>();
             foreach (var canvas in canvases)
                 canvas.enabled = !isHidding;
+            var projectors = GetComponentsInChildren<Projector>();
+            foreach (var projector in projectors)
+                projector.enabled = !isHidding;
         }
     }
 
     public Transform CacheTransform { get; private set; }
     public Rigidbody CacheRigidbody { get; private set; }
-    public Collider CacheCollider { get; private set; }
+    public CharacterMovement CacheCharacterMovement { get; private set; }
     public LiteNetLibTransform CacheNetTransform { get; private set; }
 
     public virtual CharacterStats SumAddStats
@@ -390,8 +394,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         selectCustomEquipments.onOperation = OnCustomEquipmentsChanged;
         gameObject.layer = GameInstance.Singleton.characterLayer;
         CacheTransform = transform;
-        CacheRigidbody = GetComponent<Rigidbody>();
-        CacheCollider = GetComponent<Collider>();
+        CacheRigidbody = gameObject.GetOrAddComponent<Rigidbody>();
+        CacheRigidbody.useGravity = false;
+        CacheCharacterMovement = gameObject.GetOrAddComponent<CharacterMovement>();
         CacheNetTransform = GetComponent<LiteNetLibTransform>();
         CacheNetTransform.ownerClientCanSendTransform = true;
         if (damageLaunchTransform == null)
@@ -556,7 +561,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
             // Jump
             if (!inputJump)
-                inputJump = InputManager.GetButtonDown("Jump") && isGround && !isDashing;
+                inputJump = InputManager.GetButtonDown("Jump") && isGrounded && !isDashing;
 
             // Attack, Can attack while not dashing
             if (!isDashing)
@@ -584,7 +589,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             // Dash
             if (!isDashing)
             {
-                isDashing = InputManager.GetButtonDown("Dash") && isGround;
+                isDashing = InputManager.GetButtonDown("Dash") && isGrounded;
                 if (isDashing)
                 {
                     inputAttack = false;
@@ -603,24 +608,17 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void Move(Vector3 direction)
     {
-        if (direction.sqrMagnitude > 0)
-        {
-            if (direction.sqrMagnitude > 1)
-                direction = direction.normalized;
-            direction.y = 0;
+        if (direction.sqrMagnitude > 1)
+            direction = direction.normalized;
+        direction.y = 0;
 
-            var targetSpeed = GetMoveSpeed() * (isDashing ? dashMoveSpeedMultiplier : 1f);
-            var targetVelocity = direction * targetSpeed;
-            var rigidbodyVel = CacheRigidbody.velocity;
-            rigidbodyVel.y = 0;
-            if (rigidbodyVel.sqrMagnitude < 1)
-                CacheTransform.position += targetVelocity * Time.deltaTime;
-        }
+        var targetSpeed = GetMoveSpeed() * (isDashing ? dashMoveSpeedMultiplier : 1f);
+        CacheCharacterMovement.UpdateMovement(Time.deltaTime, targetSpeed, direction, inputJump);
     }
 
     protected virtual void UpdateMovements()
     {
-        if (!IsOwnerClient || Hp <= 0)
+        if (!IsOwnerClient)
             return;
 
         var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
@@ -630,38 +628,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
         // Turn character to move direction
         if (inputDirection.magnitude <= 0 && inputMove.magnitude > 0)
             inputDirection = inputMove;
-        Rotate(isDashing ? dashInputMove : inputDirection);
+        if (!IsDead)
+            Rotate(isDashing ? dashInputMove : inputDirection);
 
-        if (inputAttack && GameplayManager.Singleton.CanAttack(this))
-            Attack();
-        else
-            StopAttack();
-
-        if (isGround && inputJump)
+        if (!IsDead)
         {
-            CacheRigidbody.velocity = new Vector3(CacheRigidbody.velocity.x, CalculateJumpVerticalSpeed(), CacheRigidbody.velocity.z);
-            isGround = false;
-            inputJump = false;
+            if (inputAttack && GameplayManager.Singleton.CanAttack(this))
+                Attack();
+            else
+                StopAttack();
         }
-    }
 
-    protected virtual void OnCollisionEnter(Collision collision)
-    {
-        if (!isGround && collision.impulse.y > 0)
-            isGround = true;
-    }
-
-    protected virtual void OnCollisionStay(Collision collision)
-    {
-        if (!isGround && collision.impulse.y > 0)
-            isGround = true;
-    }
-
-    protected float CalculateJumpVerticalSpeed()
-    {
-        // From the jump height and gravity we deduce the upwards speed 
-        // for the character to reach at the apex.
-        return Mathf.Sqrt(2f * jumpHeight * -Physics.gravity.y);
+        inputJump = false;
     }
 
     protected void Rotate(Vector2 direction)
@@ -1346,6 +1324,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [NetFunction]
     protected void _RpcEffect(uint triggerId, byte effectType)
     {
+        if (IsHidding)
+            return;
         LiteNetLibIdentity triggerObject;
         if (Manager.Assets.TryGetSpawnedObject(triggerId, out triggerObject))
         {

@@ -252,7 +252,7 @@ public class BotEntity : CharacterEntity
     private bool IsReachedTargetPosition()
     {
         if (enemy != null)
-            return Vector3.Distance(targetPosition, CacheTransform.position) < Mathf.Min(enemy.CacheCollider.bounds.size.x, enemy.CacheCollider.bounds.size.z);
+            return Vector3.Distance(targetPosition, CacheTransform.position) < Mathf.Min(enemy.CacheCharacterMovement.CacheCharacterController.bounds.size.x, enemy.CacheCharacterMovement.CacheCharacterController.bounds.size.z);
         return Vector3.Distance(targetPosition, CacheTransform.position) < ReachedTargetDistance;
     }
 
@@ -271,17 +271,6 @@ public class BotEntity : CharacterEntity
             }
         }
         return false;
-    }
-
-    protected override void OnCollisionStay(Collision collision)
-    {
-        base.OnCollisionStay(collision);
-
-        if (collision.collider.CompareTag("Wall"))
-        {
-            // Find another position to move in next frame
-            lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
-        }
     }
 
     public override bool ReceiveDamage(CharacterEntity attacker, int damage)

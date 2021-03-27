@@ -166,4 +166,9 @@ public static class GenericUtils
         color.a = alpha;
         return color;
     }
+
+    public static Vector3 GetXZ(this Vector3 position)
+    {
+        return new Vector3(position.x, 0, position.z);
+    }
 }

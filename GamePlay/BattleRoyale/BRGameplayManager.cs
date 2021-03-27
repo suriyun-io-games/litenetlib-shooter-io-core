@@ -96,6 +96,7 @@ public class BRGameplayManager : GameplayManager
         SpawnerMoveCountdown = 0;
         randomedPattern = patterns[Random.Range(0, patterns.Length)];
         isInSpawnableArea = false;
+        BRCharacterEntityExtra.BotSpawnDuration = 0f;
     }
 
     public override bool CanRespawn(CharacterEntity character)

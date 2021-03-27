@@ -6,31 +6,13 @@ using LiteNetLibManager;
 [RequireComponent(typeof(CharacterEntity))]
 public class BRCharacterEntityExtra : LiteNetLibBehaviour
 {
+    public static float BotSpawnDuration = 0f;
     [SyncField]
     public bool isSpawned;
     public bool isGroundOnce { get; private set; }
-
-    private Transform tempTransform;
-    public Transform TempTransform
-    {
-        get
-        {
-            if (tempTransform == null)
-                tempTransform = GetComponent<Transform>();
-            return tempTransform;
-        }
-    }
-
-    private CharacterEntity tempCharacterEntity;
-    public CharacterEntity TempCharacterEntity
-    {
-        get
-        {
-            if (tempCharacterEntity == null)
-                tempCharacterEntity = GetComponent<CharacterEntity>();
-            return tempCharacterEntity;
-        }
-    }
+    public Transform CacheTransform { get; private set; }
+    public CharacterEntity CacheCharacterEntity { get; private set; }
+    public CharacterMovement CacheCharacterMovement { get; private set; }
     private float botRandomSpawn;
     private bool botSpawnCalled;
     private bool botDeadRemoveCalled;
@@ -38,20 +20,21 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
 
     private void Awake()
     {
-        TempCharacterEntity.enabled = false;
-        TempCharacterEntity.IsHidding = true;
+        CacheTransform = transform;
+        CacheCharacterEntity = GetComponent<CharacterEntity>();
+        CacheCharacterEntity.enabled = false;
+        CacheCharacterEntity.IsHidding = true;
+        CacheCharacterMovement = GetComponent<CharacterMovement>();
         var brGameManager = GameplayManager.Singleton as BRGameplayManager;
-        var maxRandomDist = 30f;
         if (brGameManager != null)
         {
             if (IsServer && brGameManager.currentState != BRState.WaitingForPlayers)
             {
-                TempCharacterEntity.NetworkDestroy();
+                CacheCharacterEntity.NetworkDestroy();
                 return;
             }
-            maxRandomDist = brGameManager.spawnerMoveDuration * 0.25f;
         }
-        botRandomSpawn = Random.Range(0f, maxRandomDist);
+        botRandomSpawn = BotSpawnDuration = BotSpawnDuration + Random.Range(0.1f, 1f);
     }
 
     public override void OnSetOwnerClient(bool isOwnerClient)
@@ -67,12 +50,12 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
 
     private void Start()
     {
-        TempCharacterEntity.onDead += OnDead;
+        CacheCharacterEntity.onDead += OnDead;
     }
 
     private void OnDestroy()
     {
-        TempCharacterEntity.onDead -= OnDead;
+        CacheCharacterEntity.onDead -= OnDead;
     }
 
     private void Update()
@@ -82,7 +65,7 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
         {
             if (brGameManager.currentState != BRState.WaitingForPlayers && Time.realtimeSinceStartup - lastCircleCheckTime >= 1f)
             {
-                var currentPosition = TempTransform.position;
+                var currentPosition = CacheTransform.position;
                 currentPosition.y = 0;
 
                 var centerPosition = brGameManager.currentCenterPosition;
@@ -90,41 +73,43 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
                 var distance = Vector3.Distance(currentPosition, centerPosition);
                 var currentRadius = brGameManager.currentRadius;
                 if (distance > currentRadius)
-                    TempCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.CurrentCircleHpRateDps * TempCharacterEntity.TotalHp);
+                    CacheCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.CurrentCircleHpRateDps * CacheCharacterEntity.TotalHp);
                 lastCircleCheckTime = Time.realtimeSinceStartup;
             }
         }
         if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
         {
-            if (IsServer && !botSpawnCalled && TempCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(TempCharacterEntity))
+            if (IsServer && !botSpawnCalled && CacheCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(CacheCharacterEntity))
             {
                 botSpawnCalled = true;
                 StartCoroutine(BotSpawnRoutine());
             }
-            if (TempCharacterEntity.CacheRigidbody.useGravity)
-                TempCharacterEntity.CacheRigidbody.useGravity = false;
-            if (TempCharacterEntity.enabled)
-                TempCharacterEntity.enabled = false;
-            TempCharacterEntity.IsHidding = true;
+            if (CacheCharacterMovement.enabled)
+                CacheCharacterMovement.enabled = false;
+            if (CacheCharacterEntity.enabled)
+                CacheCharacterEntity.enabled = false;
+            CacheCharacterEntity.IsHidding = true;
             if (IsServer || IsOwnerClient)
             {
-                TempTransform.position = brGameManager.GetSpawnerPosition();
-                TempTransform.rotation = brGameManager.GetSpawnerRotation();
+                CacheTransform.position = brGameManager.GetSpawnerPosition();
+                CacheTransform.rotation = brGameManager.GetSpawnerRotation();
             }
         }
         else if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
         {
-            if (IsServer && !botDeadRemoveCalled && TempCharacterEntity is BotEntity && TempCharacterEntity.IsDead)
+            if (IsServer && !botDeadRemoveCalled && CacheCharacterEntity is BotEntity && CacheCharacterEntity.IsDead)
             {
                 botDeadRemoveCalled = true;
                 StartCoroutine(BotDeadRemoveRoutine());
             }
-            if (!TempCharacterEntity.CacheRigidbody.useGravity)
-                TempCharacterEntity.CacheRigidbody.useGravity = true;
-            if (!TempCharacterEntity.enabled)
-                TempCharacterEntity.enabled = true;
-            TempCharacterEntity.IsHidding = false;
+            if (!CacheCharacterMovement.enabled)
+                CacheCharacterMovement.enabled = true;
+            if (!CacheCharacterEntity.enabled)
+                CacheCharacterEntity.enabled = true;
+            CacheCharacterEntity.IsHidding = false;
         }
+        if (isSpawned && !isGroundOnce && CacheCharacterMovement.IsGrounded)
+            isGroundOnce = true;
     }
 
     IEnumerator BotSpawnRoutine()
@@ -156,18 +141,6 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
             ui.ShowRankResult(rank);
     }
 
-    protected virtual void OnCollisionEnter(Collision collision)
-    {
-        if (isSpawned && !isGroundOnce && collision.impulse.y > 0)
-            isGroundOnce = true;
-    }
-
-    protected virtual void OnCollisionStay(Collision collision)
-    {
-        if (isSpawned && !isGroundOnce && collision.impulse.y > 0)
-            isGroundOnce = true;
-    }
-
     public void ServerCharacterSpawn()
     {
         if (!IsServer)
@@ -176,7 +149,7 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
         if (!isSpawned && brGameplayManager != null)
         {
             isSpawned = true;
-            RpcCharacterSpawned(brGameplayManager.SpawnCharacter(TempCharacterEntity) + new Vector3(Random.Range(-2.5f, 2.5f), 0, Random.Range(-2.5f, 2.5f)));
+            RpcCharacterSpawned(brGameplayManager.SpawnCharacter(CacheCharacterEntity) + new Vector3(Random.Range(-2.5f, 2.5f), 0, Random.Range(-2.5f, 2.5f)));
         }
     }
 
@@ -189,7 +162,7 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
     public void _CmdCharacterSpawn()
     {
         var brGameplayManager = GameplayManager.Singleton as BRGameplayManager;
-        if (!isSpawned && brGameplayManager != null && brGameplayManager.CanSpawnCharacter(TempCharacterEntity))
+        if (!isSpawned && brGameplayManager != null && brGameplayManager.CanSpawnCharacter(CacheCharacterEntity))
             ServerCharacterSpawn();
     }
 
@@ -201,9 +174,8 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
     [NetFunction]
     public void _RpcCharacterSpawned(Vector3 spawnPosition)
     {
-        TempCharacterEntity.CacheTransform.position = spawnPosition;
-        TempCharacterEntity.CacheRigidbody.useGravity = true;
-        TempCharacterEntity.CacheRigidbody.isKinematic = false;
+        CacheCharacterEntity.CacheTransform.position = spawnPosition;
+        CacheCharacterMovement.enabled = true;
     }
 
     public void RpcRankResult(int rank)
