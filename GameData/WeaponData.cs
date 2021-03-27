@@ -47,20 +47,22 @@ public class WeaponData : ItemData
 
         for (int i = 0; i < spread; ++i)
         {
-            Transform launchTransform;
-            attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
             var addRotationX = Random.Range(-staggerY, staggerY);
             var addRotationY = Random.Range(-staggerX, staggerX);
-            var position = launchTransform.position;
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, targetPosition, attacker.ObjectId, addRotationX, addRotationY);
-            damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, targetPosition, attacker.ObjectId, addRotationX, addRotationY);
+            if (damageEntity)
+            {
+                damageEntity.weaponDamage = Mathf.CeilToInt(damage / spread);
+            }
+
+            // Telling nearby clients that the character use weapon
             var msg = new OpMsgCharacterAttack();
             msg.weaponId = GetHashId();
-            msg.position = position;
             msg.targetPosition = targetPosition;
             msg.attackerNetId = attacker.ObjectId;
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;
+
             foreach (var characterCollider in characterColliders)
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();

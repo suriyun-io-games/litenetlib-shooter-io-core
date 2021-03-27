@@ -214,13 +214,12 @@ public class DamageEntity : MonoBehaviour
 
     public static DamageEntity InstantiateNewEntity(OpMsgCharacterAttack msg)
     {
-        return InstantiateNewEntity(msg.weaponId, msg.isLeftHandWeapon, msg.position, msg.targetPosition, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+        return InstantiateNewEntity(msg.weaponId, msg.isLeftHandWeapon, msg.targetPosition, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
     }
 
     public static DamageEntity InstantiateNewEntity(
         int weaponId,
         bool isLeftHandWeapon,
-        Vector3 position,
         Vector3 targetPosition,
         uint attackerNetId,
         float addRotationX,
@@ -228,14 +227,13 @@ public class DamageEntity : MonoBehaviour
     {
         WeaponData weaponData;
         if (GameInstance.Weapons.TryGetValue(weaponId, out weaponData))
-            return InstantiateNewEntity(weaponData.damagePrefab, isLeftHandWeapon, position, targetPosition, attackerNetId, addRotationX, addRotationY);
+            return InstantiateNewEntity(weaponData.damagePrefab, isLeftHandWeapon, targetPosition, attackerNetId, addRotationX, addRotationY);
         return null;
     }
 
     public static DamageEntity InstantiateNewEntity(
         DamageEntity prefab,
         bool isLeftHandWeapon,
-        Vector3 position,
         Vector3 targetPosition,
         uint attackerNetId,
         float addRotationX,
@@ -253,12 +251,14 @@ public class DamageEntity : MonoBehaviour
         {
             Transform launchTransform;
             attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
-            position = launchTransform.position + attacker.CacheTransform.forward * prefab.spawnForwardOffset;
+            Vector3 position = launchTransform.position + attacker.CacheTransform.forward * prefab.spawnForwardOffset;
+            Vector3 dir = targetPosition - position;
+            Quaternion rotation = Quaternion.LookRotation(dir, Vector3.up);
+            rotation = Quaternion.Euler(rotation.eulerAngles + new Vector3(addRotationX, addRotationY));
+            DamageEntity result = Instantiate(prefab, position, rotation);
+            result.InitAttackData(isLeftHandWeapon, attackerNetId, addRotationX, addRotationY);
+            return result;
         }
-        var rotation = Quaternion.LookRotation(targetPosition, Vector3.up);
-        rotation = Quaternion.Euler(rotation.eulerAngles + new Vector3(addRotationX, addRotationY));
-        var result = Instantiate(prefab, position, rotation);
-        result.InitAttackData(isLeftHandWeapon, attackerNetId, addRotationX, addRotationY);
-        return result;
+        return null;
     }
 }
