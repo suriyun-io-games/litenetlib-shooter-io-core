@@ -134,10 +134,15 @@ public class DamageEntity : MonoBehaviour
             return;
 
         var hitSomeAliveCharacter = false;
-        if (otherCharacter != null && otherCharacter.Hp > 0)
+        if (otherCharacter != null &&
+            otherCharacter.Hp > 0 &&
+            !otherCharacter.isInvincible &&
+            GameplayManager.Singleton.CanReceiveDamage(otherCharacter, attacker))
         {
-            hitSomeAliveCharacter = true;
+            if (!otherCharacter.IsHidding)
+                EffectEntity.PlayEffect(hitEffectPrefab, otherCharacter.effectTransform);
             ApplyDamage(otherCharacter);
+            hitSomeAliveCharacter = true;
         }
 
         if (Explode(otherCharacter))
@@ -169,8 +174,15 @@ public class DamageEntity : MonoBehaviour
         {
             hitCharacter = colliders[i].GetComponent<CharacterEntity>();
             // If not character or character is attacker, skip it.
-            if (hitCharacter == null || hitCharacter == otherCharacter || hitCharacter.ObjectId == attackerNetId || hitCharacter.Hp <= 0)
+            if (hitCharacter == null ||
+                hitCharacter == otherCharacter ||
+                hitCharacter.ObjectId == attackerNetId ||
+                hitCharacter.Hp <= 0 ||
+                hitCharacter.isInvincible ||
+                !GameplayManager.Singleton.CanReceiveDamage(hitCharacter, attacker))
                 continue;
+            if (!hitCharacter.IsHidding)
+                EffectEntity.PlayEffect(hitEffectPrefab, hitCharacter.effectTransform);
             ApplyDamage(hitCharacter);
             hitSomeAliveCharacter = true;
         }
@@ -180,11 +192,10 @@ public class DamageEntity : MonoBehaviour
     private void ApplyDamage(CharacterEntity target)
     {
         // Damage receiving calculation on server only
-        if (GameNetworkManager.Singleton.IsServer)
+        if (GameNetworkManager.Singleton.IsServer && Attacker != null)
         {
-            var gameplayManager = GameplayManager.Singleton;
             float damage = weaponDamage * Attacker.TotalWeaponDamageRate;
-            damage += (Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage);
+            damage += (Random.Range(GameplayManager.Singleton.minAttackVaryRate, GameplayManager.Singleton.maxAttackVaryRate) * damage);
             target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage));
         }
         target.CacheRigidbody.AddExplosionForce(explosionForce, CacheTransform.position, explosionForceRadius);
