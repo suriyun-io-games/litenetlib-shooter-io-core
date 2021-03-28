@@ -18,11 +18,37 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public const byte RPC_EFFECT_MUZZLE_SPAWN_R = 3;
     public const byte RPC_EFFECT_MUZZLE_SPAWN_L = 4;
     public const int MAX_EQUIPPABLE_WEAPON_AMOUNT = 10;
+
+    public enum ViewMode
+    {
+        TopDown,
+        ThirdPerson,
+    }
+
+    [System.Serializable]
+    public class ViewModeSettings
+    {
+        public Vector3 targetOffsets = Vector3.zero;
+        public float zoomDistance = 3f;
+        public float minZoomDistance = 3f;
+        public float maxZoomDistance = 3f;
+        public float xRotation = 45f;
+        public float minXRotation = 45f;
+        public float maxXRotation = 45f;
+        public float yRotation = 0f;
+        public float fov = 60f;
+        public float nearClipPlane = 0.3f;
+        public float farClipPlane = 1000f;
+    }
+
+    public ViewMode viewMode;
+    public ViewModeSettings topDownViewModeSettings;
+    public ViewModeSettings thirdPersionViewModeSettings;
+    public bool doNotLockCursor;
     public Transform damageLaunchTransform;
     public Transform effectTransform;
     public Transform characterModelTransform;
     public GameObject[] localPlayerObjects;
-    public float jumpHeight = 2f;
     public float dashDuration = 1.5f;
     public float dashMoveSpeedMultiplier = 1.5f;
     [Header("UI")]
@@ -162,9 +188,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public readonly HashSet<PickupEntity> PickableEntities = new HashSet<PickupEntity>();
     public SyncListEquippedWeapon equippedWeapons = new SyncListEquippedWeapon();
 
+    protected ViewMode dirtyViewMode;
+    protected Camera targetCamera;
+    protected Vector3 cameraForward;
+    protected Vector3 cameraRight;
+    protected FollowCameraControls followCameraControls;
     protected Coroutine attackRoutine;
     protected Coroutine reloadRoutine;
-    protected Camera targetCamera;
     protected CharacterModel characterModel;
     protected CharacterData characterData;
     protected HeadData headData;
@@ -423,9 +453,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         base.OnStartOwnerClient();
 
-        var followCam = FindObjectOfType<FollowCamera>();
-        followCam.target = CacheTransform;
-        targetCamera = followCam.GetComponent<Camera>();
+        followCameraControls = FindObjectOfType<FollowCameraControls>();
+        followCameraControls.target = CacheTransform;
+        targetCamera = followCameraControls.CacheCamera;
         var uiGameplay = FindObjectOfType<UIGameplay>();
         if (uiGameplay != null)
             uiGameplay.FadeOut();
@@ -471,6 +501,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             hpText.text = hp + "/" + TotalHp;
         if (levelText != null)
             levelText.text = level.ToString("N0");
+        UpdateViewMode();
         UpdateAimPosition();
         UpdateAnimation();
         UpdateInput();
@@ -496,13 +527,116 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateMovements();
     }
 
+    protected virtual void UpdateInputDirection_TopDown(bool canAttack)
+    {
+        if (viewMode != ViewMode.TopDown)
+            return;
+        doNotLockCursor = false;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        followCameraControls.updateRotation = false;
+        followCameraControls.updateZoom = true;
+        if (isMobileInput)
+        {
+            inputDirection = Vector3.zero;
+            inputDirection += InputManager.GetAxis("Mouse Y", false) * cameraForward;
+            inputDirection += InputManager.GetAxis("Mouse X", false) * cameraRight;
+            if (canAttack)
+                inputAttack = inputDirection.magnitude != 0;
+        }
+        else
+        {
+            inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(CacheTransform.position)).normalized;
+            inputDirection = new Vector3(inputDirection.x, 0, inputDirection.y);
+            if (canAttack)
+                inputAttack = InputManager.GetButton("Fire1");
+        }
+    }
+
+    protected virtual void UpdateInputDirection_ThirdPerson(bool canAttack)
+    {
+        if (viewMode != ViewMode.ThirdPerson)
+            return;
+        if (isMobileInput || doNotLockCursor)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        if (isMobileInput)
+        {
+            followCameraControls.updateRotation = InputManager.GetButton("CameraRotate");
+            followCameraControls.updateZoom = true;
+            inputDirection = Vector3.zero;
+            inputDirection += InputManager.GetAxis("Mouse Y", false) * cameraForward;
+            inputDirection += InputManager.GetAxis("Mouse X", false) * cameraRight;
+            if (canAttack)
+                inputAttack = InputManager.GetButton("Fire1");
+        }
+        else
+        {
+            followCameraControls.updateRotation = true;
+            followCameraControls.updateZoom = true;
+            inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(CacheTransform.position)).normalized;
+            inputDirection = new Vector3(inputDirection.x, 0, inputDirection.y);
+            if (canAttack)
+                inputAttack = InputManager.GetButton("Fire1");
+        }
+    }
+
+    protected virtual void UpdateViewMode(bool force = false)
+    {
+        if (force || dirtyViewMode != viewMode)
+        {
+            dirtyViewMode = viewMode;
+            ViewModeSettings settings = viewMode == ViewMode.ThirdPerson ? thirdPersionViewModeSettings : topDownViewModeSettings;
+            followCameraControls.limitXRotation = true;
+            followCameraControls.limitYRotation = false;
+            followCameraControls.limitZoomDistance = true;
+            followCameraControls.targetOffset = settings.targetOffsets;
+            followCameraControls.zoomDistance = settings.zoomDistance;
+            followCameraControls.minZoomDistance = settings.minZoomDistance;
+            followCameraControls.maxZoomDistance = settings.maxZoomDistance;
+            followCameraControls.xRotation = settings.xRotation;
+            followCameraControls.minXRotation = settings.minXRotation;
+            followCameraControls.maxXRotation = settings.maxXRotation;
+            followCameraControls.yRotation = settings.yRotation;
+            targetCamera.fieldOfView = settings.fov;
+            targetCamera.nearClipPlane = settings.nearClipPlane;
+            targetCamera.farClipPlane = settings.farClipPlane;
+        }
+    }
+
     protected virtual void UpdateAimPosition()
     {
-        // Update aim position
-        currentActionIsForLeftHand = CurrentActionIsForLeftHand();
-        Transform launchTransform;
-        GetDamageLaunchTransform(currentActionIsForLeftHand, out launchTransform);
-        aimPosition = launchTransform.position + (CacheTransform.forward * WeaponData.damagePrefab.GetAttackRange());
+        float attackDist = WeaponData.damagePrefab.GetAttackRange();
+        switch (viewMode)
+        {
+            case ViewMode.TopDown:
+                // Update aim position
+                currentActionIsForLeftHand = CurrentActionIsForLeftHand();
+                Transform launchTransform;
+                GetDamageLaunchTransform(currentActionIsForLeftHand, out launchTransform);
+                aimPosition = launchTransform.position + (CacheTransform.forward * attackDist);
+                break;
+            case ViewMode.ThirdPerson:
+                float distanceToCharacter = Vector3.Distance(CacheTransform.position, followCameraControls.CacheCameraTransform.position);
+                float distanceToTarget = attackDist;
+                Vector3 lookAtCharacterPosition = targetCamera.ScreenToWorldPoint(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, distanceToCharacter));
+                Vector3 lookAtTargetPosition = targetCamera.ScreenToWorldPoint(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, distanceToTarget));
+                aimPosition = lookAtTargetPosition;
+                RaycastHit[] hits = Physics.RaycastAll(lookAtCharacterPosition, (lookAtTargetPosition - lookAtCharacterPosition).normalized, attackDist);
+                for (int i = 0; i < hits.Length; ++i)
+                {
+                    if (hits[i].transform.root != transform.root)
+                        aimPosition = hits[i].point;
+                }
+                break;
+        }
     }
 
     protected virtual void UpdateAnimation()
@@ -543,7 +677,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void UpdateInput()
     {
-        if (!IsOwnerClient || Hp <= 0)
+        if (!IsOwnerClient)
             return;
 
         bool canControl = true;
@@ -569,44 +703,38 @@ public class CharacterEntity : BaseNetworkGameCharacter
         inputAttack = false;
         if (canControl)
         {
-            Vector3 cameraForward = targetCamera.transform.forward;
-            Vector3 cameraRight = targetCamera.transform.right;
-            inputMove += InputManager.GetAxis("Vertical", false) * cameraForward;
-            inputMove += InputManager.GetAxis("Horizontal", false) * cameraRight;
-
-            // Jump
-            if (!inputJump)
-                inputJump = InputManager.GetButtonDown("Jump") && isGrounded && !isDashing;
-
-            // Attack, Can attack while not dashing
-            if (!isDashing)
+            cameraForward = followCameraControls.CacheCameraTransform.forward;
+            cameraForward.y = 0;
+            cameraForward = cameraForward.normalized;
+            cameraRight = followCameraControls.CacheCameraTransform.right;
+            cameraRight.y = 0;
+            cameraRight = cameraRight.normalized;
+            inputMove = Vector3.zero;
+            if (!IsDead)
             {
-                if (isMobileInput)
-                {
-                    inputDirection += InputManager.GetAxis("Mouse Y", false) * cameraForward;
-                    inputDirection += InputManager.GetAxis("Mouse X", false) * cameraRight;
-                    if (canAttack)
-                        inputAttack = inputDirection.magnitude != 0;
-                }
-                else
-                {
-                    inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(CacheTransform.position)).normalized;
-                    inputDirection = new Vector3(inputDirection.x, 0, inputDirection.y);
-                    if (canAttack)
-                        inputAttack = InputManager.GetButton("Fire1");
-                }
-                if (InputManager.GetButtonDown("Reload"))
-                    Reload();
-                if (GameplayManager.Singleton.autoReload &&
-                    CurrentEquippedWeapon.currentAmmo == 0 &&
-                    CurrentEquippedWeapon.CanReload())
-                    Reload();
+                inputMove += cameraForward * InputManager.GetAxis("Vertical", false);
+                inputMove += cameraRight * InputManager.GetAxis("Horizontal", false);
             }
 
-            // Dash
+            // Jump
+            if (!IsDead && !inputJump)
+                inputJump = InputManager.GetButtonDown("Jump") && isGrounded && !isDashing;
+
             if (!isDashing)
             {
-                isDashing = InputManager.GetButtonDown("Dash") && isGrounded;
+                UpdateInputDirection_TopDown(canAttack);
+                UpdateInputDirection_ThirdPerson(canAttack);
+                if (!IsDead)
+                {
+                    if (InputManager.GetButtonDown("Reload"))
+                        Reload();
+                    if (GameplayManager.Singleton.autoReload &&
+                        CurrentEquippedWeapon.currentAmmo == 0 &&
+                        CurrentEquippedWeapon.CanReload())
+                        Reload();
+                }
+                if (!IsDead)
+                    isDashing = InputManager.GetButtonDown("Dash") && isGrounded;
                 if (isDashing)
                 {
                     if (isMobileInput)
@@ -657,8 +785,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
         Move(isDashing ? dashDirection : moveDirection);
         // Turn character to move direction
-        if (inputDirection.magnitude <= 0 && inputMove.magnitude > 0)
+        if (inputDirection.magnitude <= 0 && inputMove.magnitude > 0 || viewMode == ViewMode.ThirdPerson)
             inputDirection = inputMove;
+        if (characterModel.TempAnimator != null && characterModel.TempAnimator.GetBool("DoAction") && viewMode == ViewMode.ThirdPerson)
+            inputDirection = cameraForward;
         if (!IsDead)
             Rotate(isDashing ? dashInputMove : inputDirection);
 
@@ -675,12 +805,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected void Rotate(Vector3 direction)
     {
-        if (direction.magnitude != 0)
-        {
-            int newRotation = (int)(Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z)).eulerAngles.y + targetCamera.transform.eulerAngles.y);
-            Quaternion targetRotation = Quaternion.Euler(0, newRotation, 0);
-            CacheTransform.rotation = targetRotation;
-        }
+        if (direction.sqrMagnitude != 0)
+            CacheTransform.rotation = Quaternion.LookRotation(direction);
     }
 
     public void GetDamageLaunchTransform(bool isLeftHandWeapon, out Transform launchTransform)
@@ -1165,7 +1291,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var equipPosition = weaponData.equipPosition;
         var equippedWeapon = equippedWeapons[equipPosition];
         var updated = false;
-        if (equippedWeapon.weaponId.Equals(weaponData.GetId()))
+        if (equippedWeapon.weaponId == weaponData.GetHashId())
         {
             updated = equippedWeapon.AddReserveAmmo(ammoAmount);
             if (updated)
