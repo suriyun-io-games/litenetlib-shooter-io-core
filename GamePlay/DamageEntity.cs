@@ -47,7 +47,7 @@ public class DamageEntity : MonoBehaviour
 
     private void Awake()
     {
-        gameObject.layer = Physics.IgnoreRaycastLayer;
+        gameObject.layer = GenericUtils.IgnoreRaycastLayer;
         CacheTransform = transform;
         CacheRigidbody = GetComponent<Rigidbody>();
         CacheCollider = GetComponent<Collider>();
@@ -125,7 +125,7 @@ public class DamageEntity : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.layer == Physics.IgnoreRaycastLayer)
+        if (other.gameObject.layer == GenericUtils.IgnoreRaycastLayer)
             return;
 
         var otherCharacter = other.GetComponent<CharacterEntity>();

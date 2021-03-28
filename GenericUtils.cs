@@ -5,6 +5,9 @@ using UnityEngine.SceneManagement;
 
 public static class GenericUtils
 {
+    public const int IgnoreRaycastLayer = 2;
+    public const int WaterLayer = 4;
+
     private static List<InputField> inputFields;
 #if USE_TEXT_MESH_PRO
     private static List<TMP_InputField> textMeshInputFields;

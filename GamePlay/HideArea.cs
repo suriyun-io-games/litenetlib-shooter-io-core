@@ -22,7 +22,7 @@ public class HideArea : MonoBehaviour
 
     private void Awake()
     {
-        gameObject.layer = Physics.IgnoreRaycastLayer;
+        gameObject.layer = GenericUtils.IgnoreRaycastLayer;
         var collider = GetComponent<Collider>();
         collider.isTrigger = true;
 
@@ -34,7 +34,7 @@ public class HideArea : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.layer == Physics.IgnoreRaycastLayer)
+        if (other.gameObject.layer == GenericUtils.IgnoreRaycastLayer)
             return;
 
         tempCharacter = other.GetComponent<CharacterEntity>();
@@ -59,7 +59,7 @@ public class HideArea : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.layer == Physics.IgnoreRaycastLayer)
+        if (other.gameObject.layer == GenericUtils.IgnoreRaycastLayer)
             return;
 
         tempCharacter = other.GetComponent<CharacterEntity>();
