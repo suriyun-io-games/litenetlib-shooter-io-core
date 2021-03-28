@@ -61,6 +61,9 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
     private void Update()
     {
         var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameManager == null)
+            return;
+        var botEntity = CacheCharacterEntity as BotEntity;
         if (IsServer)
         {
             if (brGameManager.currentState != BRState.WaitingForPlayers && Time.realtimeSinceStartup - lastCircleCheckTime >= 1f)
@@ -75,29 +78,18 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
                 if (distance > currentRadius)
                     CacheCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.CurrentCircleHpRateDps * CacheCharacterEntity.TotalHp);
                 lastCircleCheckTime = Time.realtimeSinceStartup;
+                if (botEntity != null)
+                {
+                    botEntity.isFixRandomMoveAroundPoint = currentRadius > 0 && distance > currentRadius;
+                    botEntity.fixRandomMoveAroundPoint = centerPosition;
+                    botEntity.fixRandomMoveAroundDistance = currentRadius;
+                }
             }
         }
-        if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
+
+        if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
         {
-            if (IsServer && !botSpawnCalled && CacheCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(CacheCharacterEntity))
-            {
-                botSpawnCalled = true;
-                StartCoroutine(BotSpawnRoutine());
-            }
-            if (CacheCharacterMovement.enabled)
-                CacheCharacterMovement.enabled = false;
-            if (CacheCharacterEntity.enabled)
-                CacheCharacterEntity.enabled = false;
-            CacheCharacterEntity.IsHidding = true;
-            if (IsServer || IsOwnerClient)
-            {
-                CacheTransform.position = brGameManager.GetSpawnerPosition();
-                CacheTransform.rotation = brGameManager.GetSpawnerRotation();
-            }
-        }
-        else if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
-        {
-            if (IsServer && !botDeadRemoveCalled && CacheCharacterEntity is BotEntity && CacheCharacterEntity.IsDead)
+            if (IsServer && !botDeadRemoveCalled && botEntity != null && CacheCharacterEntity.IsDead)
             {
                 botDeadRemoveCalled = true;
                 StartCoroutine(BotDeadRemoveRoutine());
@@ -108,8 +100,62 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
                 CacheCharacterEntity.enabled = true;
             CacheCharacterEntity.IsHidding = false;
         }
+
+        switch (brGameManager.spawnType)
+        {
+            case BRSpawnType.BattleRoyale:
+                UpdateSpawnBattleRoyale();
+                break;
+            case BRSpawnType.Random:
+                UpdateSpawnRandom();
+                break;
+        }
+
         if (isSpawned && !isGroundOnce && CacheCharacterMovement.IsGrounded)
             isGroundOnce = true;
+    }
+
+    private void UpdateSpawnBattleRoyale()
+    {
+        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameManager == null)
+            return;
+        var botEntity = CacheCharacterEntity as BotEntity;
+        if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
+        {
+            if (IsServer && !botSpawnCalled && botEntity != null && brGameManager.CanSpawnCharacter(CacheCharacterEntity))
+            {
+                botSpawnCalled = true;
+                StartCoroutine(BotSpawnRoutine());
+            }
+            // Hide character and disable physics while in airplane
+            if (CacheCharacterMovement.enabled)
+                CacheCharacterMovement.enabled = false;
+            if (CacheCharacterEntity.enabled)
+                CacheCharacterEntity.enabled = false;
+            CacheCharacterEntity.IsHidding = true;
+            // Move position / rotation follow the airplane
+            if (IsServer || IsOwnerClient)
+            {
+                CacheTransform.position = brGameManager.GetSpawnerPosition();
+                CacheTransform.rotation = brGameManager.GetSpawnerRotation();
+            }
+        }
+    }
+
+    private void UpdateSpawnRandom()
+    {
+        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameManager == null)
+            return;
+
+        if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned && IsServer)
+        {
+            var position = CacheCharacterEntity.GetSpawnPosition();
+            CacheCharacterEntity.CacheTransform.position = position;
+            CacheCharacterEntity.TargetSpawn(CacheCharacterEntity.ConnectionId, position);
+            isSpawned = true;
+        }
     }
 
     IEnumerator BotSpawnRoutine()

@@ -30,9 +30,16 @@ public enum BRState : byte
     LastCircle,
 }
 
+public enum BRSpawnType : byte
+{
+    BattleRoyale,
+    Random,
+}
+
 public class BRGameplayManager : GameplayManager
 {
     [Header("Battle Royale")]
+    public BRSpawnType spawnType;
     public float waitForPlayersDuration;
     public float waitForFirstCircleDuration;
     public SimpleCubeData spawnableArea;
