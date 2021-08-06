@@ -1,8 +1,6 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using LiteNetLibManager;
 
 public class UIGameplay : MonoBehaviour
 {
@@ -252,12 +250,12 @@ public class UIGameplay : MonoBehaviour
         }
     }
 
-    public void AddAttribute(string name)
+    public void AddAttribute(int id)
     {
         var character = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (character == null || character.statPoint == 0)
             return;
-        character.CmdAddAttribute(name);
+        character.CmdAddAttribute(id);
         StartCoroutine(SetupCanRandomAttributes());
     }
 

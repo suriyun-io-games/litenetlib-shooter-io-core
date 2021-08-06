@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class CharacterAttributes : ScriptableObject
 {
@@ -10,4 +8,8 @@ public class CharacterAttributes : ScriptableObject
     public Texture icon;
     public int randomWeight;
     public CharacterStats stats;
+    public int GetHashId()
+    {
+        return name.MakeHashId();
+    }
 }

@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public class UIRandomAttribute : MonoBehaviour
@@ -28,6 +26,6 @@ public class UIRandomAttribute : MonoBehaviour
 
     public void OnClickAddAttribute()
     {
-        uiGameplay.AddAttribute(_attributes.name);
+        uiGameplay.AddAttribute(_attributes.GetHashId());
     }
 }

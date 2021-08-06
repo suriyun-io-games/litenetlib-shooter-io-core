@@ -23,10 +23,12 @@ public class GameplayManager : LiteNetLibBehaviour
     public int baseMaxArmor = 100;
     public int baseMoveSpeed = 30;
     public float baseWeaponDamageRate = 1f;
-    public float baseReduceDamageRate = 0f;
-    public float baseArmorReduceDamage = 0.3f;
     public float maxWeaponDamageRate = 2f;
+    public float baseReduceDamageRate = 0f;
     public float maxReduceDamageRate = 0.6f;
+    public float baseBlockReduceDamageRate = 0.3f;
+    public float maxBlockReduceDamageRate = 0.6f;
+    public float baseArmorReduceDamage = 0.3f;
     public float maxArmorReduceDamage = 0.6f;
     public int addingStatPoint = 1;
     public float minAttackVaryRate = -0.07f;
@@ -44,9 +46,9 @@ public class GameplayManager : LiteNetLibBehaviour
     public SpawnArea[] pickupSpawnAreas;
     public PowerUpSpawnData[] powerUps;
     public PickupSpawnData[] pickups;
-    public readonly Dictionary<string, PowerUpEntity> powerUpEntities = new Dictionary<string, PowerUpEntity>();
-    public readonly Dictionary<string, PickupEntity> pickupEntities = new Dictionary<string, PickupEntity>();
-    public readonly Dictionary<string, CharacterAttributes> attributes = new Dictionary<string, CharacterAttributes>();
+    public readonly Dictionary<string, PowerUpEntity> PowerUpEntities = new Dictionary<string, PowerUpEntity>();
+    public readonly Dictionary<string, PickupEntity> PickupEntities = new Dictionary<string, PickupEntity>();
+    public readonly Dictionary<int, CharacterAttributes> Attributes = new Dictionary<int, CharacterAttributes>();
     private bool isRegisteredPrefabs;
 
     protected virtual void Awake()
@@ -64,28 +66,28 @@ public class GameplayManager : LiteNetLibBehaviour
         if (isRegisteredPrefabs)
             return;
         isRegisteredPrefabs = true;
-        powerUpEntities.Clear();
+        PowerUpEntities.Clear();
         foreach (var powerUp in powerUps)
         {
             var powerUpPrefab = powerUp.powerUpPrefab;
             if (powerUpPrefab != null)
                 GameNetworkManager.Singleton.Assets.RegisterPrefab(powerUpPrefab.Identity);
-            if (powerUpPrefab != null && !powerUpEntities.ContainsKey(powerUpPrefab.name))
-                powerUpEntities.Add(powerUpPrefab.name, powerUpPrefab);
+            if (powerUpPrefab != null && !PowerUpEntities.ContainsKey(powerUpPrefab.name))
+                PowerUpEntities.Add(powerUpPrefab.name, powerUpPrefab);
         }
-        pickupEntities.Clear();
+        PickupEntities.Clear();
         foreach (var pickup in pickups)
         {
             var pickupPrefab = pickup.pickupPrefab;
             if (pickupPrefab != null)
                 GameNetworkManager.Singleton.Assets.RegisterPrefab(pickupPrefab.Identity);
-            if (pickupPrefab != null && !pickupEntities.ContainsKey(pickupPrefab.name))
-                pickupEntities.Add(pickupPrefab.name, pickupPrefab);
+            if (pickupPrefab != null && !PickupEntities.ContainsKey(pickupPrefab.name))
+                PickupEntities.Add(pickupPrefab.name, pickupPrefab);
         }
-        attributes.Clear();
+        Attributes.Clear();
         foreach (var availableAttribute in availableAttributes)
         {
-            attributes[availableAttribute.name] = availableAttribute;
+            Attributes[availableAttribute.GetHashId()] = availableAttribute;
         }
     }
 
@@ -123,7 +125,7 @@ public class GameplayManager : LiteNetLibBehaviour
         if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
         PowerUpEntity powerUpPrefab;
-        if (powerUpEntities.TryGetValue(prefabName, out powerUpPrefab)) {
+        if (PowerUpEntities.TryGetValue(prefabName, out powerUpPrefab)) {
             var powerUpEntity = Instantiate(powerUpPrefab, position, Quaternion.identity);
             powerUpEntity.prefabName = prefabName;
             Manager.Assets.NetworkSpawn(powerUpEntity.gameObject);
@@ -140,7 +142,7 @@ public class GameplayManager : LiteNetLibBehaviour
         if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
         PickupEntity pickupPrefab;
-        if (pickupEntities.TryGetValue(prefabName, out pickupPrefab))
+        if (PickupEntities.TryGetValue(prefabName, out pickupPrefab))
         {
             var pickupEntity = Instantiate(pickupPrefab, position, Quaternion.identity);
             pickupEntity.prefabName = prefabName;

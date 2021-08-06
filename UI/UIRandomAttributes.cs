@@ -22,7 +22,7 @@ public class UIRandomAttributes : MonoBehaviour {
     {
         var gameplay = GameplayManager.Singleton;
         var dict = new Dictionary<CharacterAttributes, int>();
-        var list = gameplay.attributes.Values.ToList();
+        var list = gameplay.Attributes.Values.ToList();
         foreach (var entry in list)
         {
             dict.Add(entry, entry.randomWeight);
