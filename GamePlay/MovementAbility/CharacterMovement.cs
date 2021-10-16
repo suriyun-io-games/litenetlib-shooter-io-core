@@ -33,6 +33,7 @@ public class CharacterMovement : MonoBehaviour
     [Range(0.1f, 1f)]
     public float underWaterThreshold = 0.75f;
     public bool autoSwimToSurface;
+    public float explosionForceReduction = 5f;
 
     public CharacterEntity CacheEntity { get; private set; }
     public Transform CacheTransform { get; private set; }
@@ -85,9 +86,16 @@ public class CharacterMovement : MonoBehaviour
     private float tempCurrentMoveSpeed;
     private CollisionFlags collisionFlags;
     private float pauseMovementCountDown;
+    private Vector3 explosionForce;
 
     protected virtual void Awake()
     {
+        var rigidBody = gameObject.GetComponent<Rigidbody>();
+        if (rigidBody)
+        {
+            rigidBody.isKinematic = true;
+            rigidBody.useGravity = false;
+        }
         CacheTransform = transform;
         CacheEntity = gameObject.GetComponent<CharacterEntity>();
         CacheCharacterController = gameObject.GetOrAddComponent<CharacterController>();
@@ -141,16 +149,12 @@ public class CharacterMovement : MonoBehaviour
         isUnderWater = currentThreshold >= underWaterThreshold;
     }
 
-    protected virtual void Update()
-    {
-
-    }
-
     public void UpdateMovement(float deltaTime, float moveSpeed, Vector3 tempInputDirection, bool isJumping)
     {
         if (!enabled)
             return;
 
+        explosionForce = Vector3.Lerp(explosionForce, Vector3.zero, explosionForceReduction * Time.unscaledDeltaTime);
         tempCurrentPosition = CacheTransform.position;
         tempMoveVelocity = Vector3.zero;
         tempMoveDirection = Vector3.zero;
@@ -200,7 +204,7 @@ public class CharacterMovement : MonoBehaviour
             tempTargetPosition = tempCurrentPosition + tempMoveDirection;
         }
 
-        if (CacheEntity.isDead)
+        if (CacheEntity.IsDead)
         {
             tempMoveDirection = Vector3.zero;
             isJumping = false;
@@ -238,7 +242,7 @@ public class CharacterMovement : MonoBehaviour
 
         if (applyingJumpForce)
         {
-            applyJumpForceCountDown -= Time.deltaTime;
+            applyJumpForceCountDown -= deltaTime;
             if (applyJumpForceCountDown <= 0f)
             {
                 isGrounded = false;
@@ -330,8 +334,8 @@ public class CharacterMovement : MonoBehaviour
             }
         }
 
-        Vector3 stickGroundMove = isGrounded && !isUnderWater ? Vector3.down * stickGroundForce * Time.deltaTime : Vector3.zero;
-        collisionFlags = CacheCharacterController.Move((tempMoveVelocity + platformMotion) * deltaTime + stickGroundMove);
+        Vector3 stickGroundMove = isGrounded && !isUnderWater ? Vector3.down * stickGroundForce * deltaTime : Vector3.zero;
+        collisionFlags = CacheCharacterController.Move((explosionForce + tempMoveVelocity + platformMotion) * deltaTime + stickGroundMove);
         if ((collisionFlags & CollisionFlags.CollidedBelow) == CollisionFlags.CollidedBelow ||
             (collisionFlags & CollisionFlags.CollidedAbove) == CollisionFlags.CollidedAbove)
         {
@@ -401,5 +405,18 @@ public class CharacterMovement : MonoBehaviour
                 groundedLocalPosition = groundedTransform.InverseTransformPoint(oldGroundedPosition);
             }
         }
+    }
+
+    public void AddExplosionForce(Vector3 origin, float force, float forceRadius)
+    {
+        float dist = Vector3.Distance(CacheTransform.position, origin);
+        if (dist > forceRadius)
+        {
+            // No force applied
+            return;
+        }
+        force *= 1f - (dist / forceRadius);
+        Vector3 dir = CacheTransform.position - origin;
+        explosionForce += dir * force;
     }
 }
