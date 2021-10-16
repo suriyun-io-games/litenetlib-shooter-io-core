@@ -92,6 +92,7 @@ public class BotEntity : CharacterEntity
 
         if (GameNetworkManager.Singleton.PlayersCount <= 0)
         {
+            isBlocking = false;
             attackingActionId = -1;
             return;
         }
@@ -152,7 +153,6 @@ public class BotEntity : CharacterEntity
             lookingPosition = enemy.CacheTransform.position;
         }
 
-        attackingActionId = -1;
         if (enemy != null)
         {
             switch (characteristic)
@@ -201,8 +201,7 @@ public class BotEntity : CharacterEntity
 
         // Gets a vector that points from the player's position to the target's.
         isReachedTarget = IsReachedTargetPosition();
-        if (!isReachedTarget)
-            Move(isDashing ? dashDirection : (targetPosition - CacheTransform.position).normalized);
+        Move(isReachedTarget ? Vector3.zero : (isDashing ? dashDirection : (targetPosition - CacheTransform.position).normalized));
 
         if (isReachedTarget)
         {
@@ -217,6 +216,29 @@ public class BotEntity : CharacterEntity
         UpdateStatPoint();
     }
 
+    protected override void OnIsBlockingUpdated()
+    {
+        isBlocking = false;
+    }
+
+    protected override void OnAttackingActionIdUpdated()
+    {
+        attackingActionId = -1;
+    }
+
+    void OnDrawGizmos()
+    {
+        if (path != null && path.corners != null && path.corners.Length > 0)
+        {
+            for (int i = path.corners.Length - 1; i >= 1; --i)
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(path.corners[i], path.corners[i - 1]);
+            }
+        }
+    }
+
+    NavMeshPath path;
     private void GetMovePaths(Vector3 position)
     {
         int areaMask = 0;
@@ -233,21 +255,21 @@ public class BotEntity : CharacterEntity
         }
         NavMeshPath navPath = new NavMeshPath();
         NavMeshHit navHit;
-        if (NavMesh.SamplePosition(position, out navHit, 5f, areaMask) &&
+        if (NavMesh.SamplePosition(position, out navHit, 1000f, areaMask) &&
             NavMesh.CalculatePath(CacheTransform.position, navHit.position, areaMask, navPath))
         {
+            path = navPath;
             navPaths = new Queue<Vector3>(navPath.corners);
             // Dequeue first path it's not require for future movement
             navPaths.Dequeue();
+            // Set movement
+            if (navPaths.Count > 0)
+                targetPosition = navPaths.Dequeue();
         }
-        // Initial queue
-        if (navPaths == null)
-            navPaths = new Queue<Vector3>();
-        // Set first target position immediately
-        if (navPaths.Count > 0)
-            targetPosition = navPaths.Dequeue();
         else
+        {
             targetPosition = position;
+        }
     }
 
     private void UpdateStatPoint()
