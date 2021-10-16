@@ -159,28 +159,31 @@ public class BotEntity : CharacterEntity
             {
                 case Characteristic.Aggressive:
                     if (Time.unscaledTime - lastAttackTime >= attackDuration &&
-                    Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
+                        Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
                     {
                         // Attack when nearby enemy
-                        attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
-                        lastAttackTime = Time.unscaledTime;
-                        if (CurrentEquippedWeapon.currentReserveAmmo > 0)
+                        if (WeaponData != null)
                         {
-                            if (CurrentEquippedWeapon.currentAmmo == 0)
-                                ServerReload();
-                            else if (attackingActionId < 0)
-                                attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
-                        }
-                        else
-                        {
-                            if (WeaponData != null)
+                            attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
+                            lastAttackTime = Time.unscaledTime;
+                            if (CurrentEquippedWeapon.currentReserveAmmo > 0)
+                            {
+                                if (CurrentEquippedWeapon.currentAmmo == 0)
+                                    ServerReload();
+                                else if (attackingActionId < 0)
+                                    attackingActionId = WeaponData.GetRandomAttackAnimation().actionId;
+                            }
+                            else
                             {
                                 var nextPosition = WeaponData.equipPosition + 1;
                                 if (nextPosition < equippedWeapons.Count && !equippedWeapons[nextPosition].IsEmpty())
                                     ServerChangeWeapon(nextPosition);
                             }
-                            else
-                                ServerChangeWeapon(selectWeaponIndex + 1);
+                        }
+                        else
+                        {
+                            // Try find next weapon
+                            ServerChangeWeapon(selectWeaponIndex + 1);
                         }
                     }
                     break;
