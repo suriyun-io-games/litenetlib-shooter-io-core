@@ -105,13 +105,9 @@ public class DamageEntity : MonoBehaviour
                 }
                 var baseAngles = attacker.CacheTransform.eulerAngles;
                 CacheTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
-                CacheRigidbody.velocity = Attacker.CacheRigidbody.velocity + GetForwardVelocity();
             }
-            else
-                CacheRigidbody.velocity = GetForwardVelocity();
         }
-        else
-            CacheRigidbody.velocity = GetForwardVelocity();
+        CacheRigidbody.velocity = GetForwardVelocity();
     }
 
     private void OnDestroy()
@@ -198,7 +194,7 @@ public class DamageEntity : MonoBehaviour
             damage += (Random.Range(GameplayManager.Singleton.minAttackVaryRate, GameplayManager.Singleton.maxAttackVaryRate) * damage);
             target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage));
         }
-        target.CacheRigidbody.AddExplosionForce(explosionForce, CacheTransform.position, explosionForceRadius);
+        target.CacheCharacterMovement.AddExplosionForce(CacheTransform.position, explosionForce, explosionForceRadius);
     }
 
     private float GetColliderExtents()
