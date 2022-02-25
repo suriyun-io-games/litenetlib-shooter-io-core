@@ -1073,14 +1073,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var targetLevel = target.level;
         var maxLevel = gameplayManager.maxLevel;
         Exp += Mathf.CeilToInt(target.RewardExp * TotalExpRate);
-        score += Mathf.CeilToInt(target.KillScore * TotalScoreRate);
+        var increaseScore = Mathf.CeilToInt(target.KillScore * TotalScoreRate);
+        score += increaseScore;
+        GameNetworkManager.Singleton.OnScoreIncrease(this, increaseScore);
         foreach (var rewardCurrency in gameplayManager.rewardCurrencies)
         {
             var currencyId = rewardCurrency.currencyId;
             var amount = rewardCurrency.amount.Calculate(targetLevel, maxLevel);
             TargetRewardCurrency(ConnectionId, currencyId, amount);
         }
-        ++killCount;
+        var increaseKill = 1;
+        killCount += increaseKill;
+        GameNetworkManager.Singleton.OnKillIncrease(this, increaseKill);
         GameNetworkManager.Singleton.SendKillNotify(playerName, target.playerName, WeaponData == null ? string.Empty : WeaponData.GetId());
     }
 
