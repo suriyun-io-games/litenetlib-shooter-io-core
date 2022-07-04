@@ -70,6 +70,12 @@ public class UIMainMenu : MonoBehaviour
     private void Start()
     {
         StartCoroutine(StartRoutine());
+        var uis = FindObjectsOfType<UIProductList>(true);
+        foreach (var ui in uis)
+        {
+            ui.onPurchaseSuccess.RemoveListener(UpdateAvailableItems);
+            ui.onPurchaseSuccess.AddListener(UpdateAvailableItems);
+        }
     }
 
     private IEnumerator StartRoutine()
