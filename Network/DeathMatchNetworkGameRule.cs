@@ -12,6 +12,7 @@ public class DeathMatchNetworkGameRule : IONetworkGameRule
     public override bool ShowZeroKillCountWhenDead { get { return false; } }
     public override bool ShowZeroAssistCountWhenDead { get { return false; } }
     public override bool ShowZeroDieCountWhenDead { get { return false; } }
+    public override bool RankedByKillCount { get { return true; } }
 
     public override void OnStopConnection()
     {
