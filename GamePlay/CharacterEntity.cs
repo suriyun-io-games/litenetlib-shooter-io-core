@@ -170,7 +170,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncField(onUpdateMethodName = nameof(OnAttackingActionIdUpdated)), Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
     public int attackingActionId = -1;
 
-    [SyncField(onChangeMethodName = nameof(OnAttributeAmountsChanged), alwaysSync = true)]
+    [SyncField(onChangeMethodName = nameof(OnAttributeAmountsChanged), syncBehaviour = LiteNetLibSyncField.SyncBehaviour.AlwaysSync)]
     public AttributeAmounts attributeAmounts = new AttributeAmounts(0);
 
     [SyncField]
